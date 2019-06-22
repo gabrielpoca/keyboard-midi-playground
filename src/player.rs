@@ -11,13 +11,13 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(conn: Arc<Mutex<(u8)>>, sender: mpsc::Sender<Message>) -> Player {
+    pub fn new(conn: Arc<Mutex<(u8)>>, note_sender: mpsc::Sender<Message>) -> Player {
         let handle = thread::spawn(move || {
             let play_note = |note: u8, duration: u64| {
                 const NOTE_ON_MSG: u8 = 0x90;
                 const NOTE_OFF_MSG: u8 = 0x80;
                 const VELOCITY: u8 = 0x64;
-                let _ = sender
+                let _ = note_sender
                     .send(Message {
                         message: NOTE_ON_MSG,
                         note,
@@ -25,7 +25,7 @@ impl Player {
                     })
                     .unwrap();
                 sleep(Duration::from_millis(duration * 150));
-                let _ = sender
+                let _ = note_sender
                     .send(Message {
                         message: NOTE_OFF_MSG,
                         note,
@@ -38,7 +38,6 @@ impl Player {
                 let num = conn.lock().unwrap();
                 let base = *num;
                 std::mem::drop(num);
-                println!("base {}", base);
                 play_note(66 + base, 4);
                 play_note(65 + base, 3);
                 play_note(63 + base, 1);

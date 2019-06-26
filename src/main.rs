@@ -1,8 +1,12 @@
+#[macro_use]
+extern crate crossbeam_channel;
+
+use crossbeam_channel::unbounded;
 use std::error::Error;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex, RwLock};
 
-use message::Message;
+use message::Note;
 use output::Output;
 use player::Player;
 use render::Render;
@@ -21,14 +25,20 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<Error>> {
-    let (note_sender, note_recv) = mpsc::channel::<Message>();
+    let (note_sender, note_recv) = mpsc::channel::<Note>();
     let logs = Vec::new();
     let logs_m = Arc::new(RwLock::new(logs));
     let m = Arc::new(Mutex::new(0));
+    let (events_emitter, events_recv) = unbounded();
 
     let output = Output::new(note_recv, Arc::clone(&logs_m));
     let player = Player::new(Arc::clone(&m), note_sender);
-    let render = Render::new(Arc::clone(&m), Arc::clone(&logs_m));
+    let render = Render::new(
+        Arc::clone(&m),
+        Arc::clone(&logs_m),
+        events_emitter.clone(),
+        events_recv.clone(),
+    );
 
     player.wait();
     output.wait();

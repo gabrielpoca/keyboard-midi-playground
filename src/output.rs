@@ -1,4 +1,4 @@
-use super::message::Message;
+use super::message::Note;
 use midir::MidiOutput;
 use std::error::Error;
 use std::sync::mpsc;
@@ -12,41 +12,35 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn new(msg_recv: mpsc::Receiver<Message>, logs_m: Arc<RwLock<(Vec<String>)>>) -> Output {
-        let out_port = Output::get_port().unwrap();
+    pub fn new(msg_recv: mpsc::Receiver<Note>, logs_m: Arc<RwLock<(Vec<String>)>>) -> Output {
+        let out_port = Output::get_port(Arc::clone(&logs_m)).unwrap();
 
         let handle = thread::spawn(move || {
-            {
-                let mut logs = logs_m.write().unwrap();
-                logs.insert(0, "Opening connection".into());
-            }
-
-            let midi_out = MidiOutput::new("My Test Output").unwrap();
-            let mut conn_out = midi_out.connect(out_port, "midir-test").unwrap();
+            let midi_out = MidiOutput::new("Midi seq").unwrap();
 
             {
                 let mut logs = logs_m.write().unwrap();
-                logs.insert(0, "Connection open. Listen!".into());
+
+                let midi_out_name = midi_out.port_name(out_port).unwrap();
+
+                logs.insert(0, "Connection open".into());
+                logs.insert(0, format!("Writing to device {}", midi_out_name,));
             }
 
-            sleep(Duration::from_millis(250));
+            let mut conn_out = midi_out.connect(out_port, "midi-seq").unwrap();
 
             for received in msg_recv {
+                conn_out
+                    .send(&[received.message as u8, received.note, received.velocity])
+                    .unwrap();
                 let mut logs = logs_m.write().unwrap();
                 logs.insert(0, format!("note: {}", received.note));
-                conn_out
-                    .send(&[received.message, received.note, received.velocity])
-                    .unwrap();
             }
 
             {
                 let mut logs = logs_m.write().unwrap();
                 logs.insert(0, "Closing connection".into());
-            }
-            // This is optional, the connection would automatically be closed as soon as it goes out of scope
-            conn_out.close();
-            {
-                let mut logs = logs_m.write().unwrap();
+                conn_out.close();
                 logs.insert(0, "Connection closed".into());
             }
         });
@@ -54,14 +48,25 @@ impl Output {
         return Output { handle };
     }
 
-    fn get_port() -> Result<usize, Box<Error>> {
+    fn get_port(logs_m: Arc<RwLock<(Vec<String>)>>) -> Result<usize, Box<Error>> {
         let midi_out = MidiOutput::new("My Test Output").unwrap();
 
-        // Get an output port (read from console if multiple are available)
         let out_port = match midi_out.port_count() {
             0 => return Err("no output port found".into()),
             _ => 0,
         };
+
+        {
+            // Get an output port (read from console if multiple are available)
+
+            let mut logs = logs_m.write().unwrap();
+            for i in 0..midi_out.port_count() {
+                logs.insert(
+                    0,
+                    format!("Midi out {} {}", midi_out.port_name(i).unwrap(), i),
+                );
+            }
+        }
         //let out_port = match midi_out.port_count() {
         //0 => return Err("no output port found".into()),
         //1 => {

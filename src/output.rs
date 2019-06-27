@@ -1,18 +1,18 @@
-use super::message::Note;
+use super::events::Event;
 use midir::MidiOutput;
 use std::error::Error;
-use std::sync::mpsc;
 use std::sync::{Arc, RwLock};
 use std::thread;
-use std::thread::sleep;
-use std::time::Duration;
 
 pub struct Output {
     handle: thread::JoinHandle<()>,
 }
 
 impl Output {
-    pub fn new(msg_recv: mpsc::Receiver<Note>, logs_m: Arc<RwLock<(Vec<String>)>>) -> Output {
+    pub fn new(
+        events_recv: crossbeam_channel::Receiver<Event>,
+        logs_m: Arc<RwLock<(Vec<String>)>>,
+    ) -> Output {
         let out_port = Output::get_port(Arc::clone(&logs_m)).unwrap();
 
         let handle = thread::spawn(move || {
@@ -29,12 +29,28 @@ impl Output {
 
             let mut conn_out = midi_out.connect(out_port, "midi-seq").unwrap();
 
-            for received in msg_recv {
-                conn_out
-                    .send(&[received.message as u8, received.note, received.velocity])
-                    .unwrap();
-                let mut logs = logs_m.write().unwrap();
-                logs.insert(0, format!("note: {}", received.note));
+            loop {
+                select! {
+                    recv(events_recv) -> msg => {
+                        match msg.unwrap() {
+                            Event::Note {
+                                message,
+                                note,
+                                velocity,
+                            } => {
+                                conn_out.send(&[message as u8, note, velocity]).unwrap();
+                                let mut logs = logs_m.write().unwrap();
+                                logs.insert(0, format!("note: {}", note));
+                            },
+                            Event::Signal { message } => {
+                                if message == "quit" {
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             }
 
             {

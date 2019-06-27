@@ -1,37 +1,40 @@
 use rand::Rng;
-use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
-use super::message::{Note, NoteMessage};
+use crate::events::{Event, NoteMessage};
 
 pub struct Player {
     handle: thread::JoinHandle<()>,
 }
 
 impl Player {
-    pub fn new(conn: Arc<Mutex<(u8)>>, note_sender: mpsc::Sender<Note>) -> Player {
+    pub fn new(conn: Arc<Mutex<(u8)>>, events_emitter: crossbeam_channel::Sender<Event>) -> Player {
         let handle = thread::spawn(move || {
             let mut rng = rand::thread_rng();
 
             let mut play_note = |note: u8, duration: u64| {
                 let velocity = rng.gen_range(10, 100);
 
-                let _ = note_sender.send(Note {
-                    message: NoteMessage::On,
-                    note,
-                    velocity,
-                });
+                let _ = events_emitter
+                    .send(Event::Note {
+                        message: NoteMessage::On,
+                        note,
+                        velocity,
+                    })
+                    .unwrap();
 
                 sleep(Duration::from_millis(duration));
 
-                let _ = note_sender.send(Note {
-                    message: NoteMessage::Off,
-                    note,
-                    velocity,
-                });
+                let _ = events_emitter
+                    .send(Event::Note {
+                        message: NoteMessage::Off,
+                        note,
+                        velocity,
+                    })
+                    .unwrap();
             };
 
             for _i in 0..3 {

@@ -1,83 +1,92 @@
-use std::io;
-use std::sync::mpsc;
+use crossbeam_channel::{unbounded, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
-
 use termion::event::Key;
-use termion::input::TermRead;
 
-pub enum Event<I> {
-    Input(I),
-    Tick,
+#[derive(Debug, Clone)]
+pub enum NoteMessage {
+    On = 0x90,
+    Off = 0x80,
 }
 
-/// A small event handler that wrap termion input and tick events. Each event
-/// type is handled in its own thread and returned to a common `Receiver`
-pub struct Events {
-    rx: mpsc::Receiver<Event<Key>>,
-    input_handle: thread::JoinHandle<()>,
-    tick_handle: thread::JoinHandle<()>,
+#[derive(Debug, Clone)]
+pub enum Event {
+    Note {
+        message: NoteMessage,
+        note: u8,
+        velocity: u8,
+    },
+    Signal {
+        message: String,
+    },
+    Key {
+        key: Key,
+    },
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Config {
-    pub exit_key: Key,
-    pub tick_rate: Duration,
+#[derive(Debug)]
+struct EventBusInner {
+    local_receiver: Receiver<Event>,
+    all_emitters: Vec<Sender<Event>>,
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            exit_key: Key::Char('q'),
-            tick_rate: Duration::from_millis(250),
-        }
+#[derive(Debug)]
+pub struct EventBus {
+    pub emitter: Sender<Event>,
+    inner: Arc<Mutex<EventBusInner>>,
+    handle: Option<thread::JoinHandle<()>>,
+}
+
+impl EventBus {
+    pub fn new() -> EventBus {
+        let (events_emitter, events_recv) = unbounded();
+
+        return EventBus {
+            emitter: events_emitter,
+            inner: Arc::new(Mutex::new(EventBusInner {
+                local_receiver: events_recv,
+                all_emitters: Vec::new(),
+            })),
+            handle: None,
+        };
     }
-}
 
-impl Events {
-    pub fn new() -> Events {
-        Events::with_config(Config::default())
+    pub fn new_receive(&mut self) -> crossbeam_channel::Receiver<Event> {
+        let (events_emitter, events_recv) = unbounded();
+
+        let mut inner = self.inner.lock().unwrap();
+
+        inner.all_emitters.push(events_emitter);
+
+        return events_recv;
     }
 
-    pub fn with_config(config: Config) -> Events {
-        let (tx, rx) = mpsc::channel();
-        let input_handle = {
-            let tx = tx.clone();
-            thread::spawn(move || {
-                let stdin = io::stdin();
-                for evt in stdin.keys() {
-                    match evt {
-                        Ok(key) => {
-                            if let Err(_) = tx.send(Event::Input(key)) {
-                                return;
-                            }
-                            if key == config.exit_key {
-                                return;
-                            }
-                        }
-                        Err(_) => {}
+    pub fn start(&mut self) {
+        let innert_copy = self.inner.clone();
+
+        let handle = thread::spawn(move || {
+            let inner = &innert_copy.lock().unwrap();
+
+            println!("{:?}", inner);
+
+            loop {
+                select! {
+                    recv(inner.local_receiver) -> event => {
+                        let my_event = event.unwrap();
+                        for e in inner.all_emitters.clone() {
+                            e.send(my_event.clone()).unwrap();
+                        };
                     }
                 }
-            })
-        };
-        let tick_handle = {
-            let tx = tx.clone();
-            thread::spawn(move || {
-                let tx = tx.clone();
-                loop {
-                    tx.send(Event::Tick).unwrap();
-                    thread::sleep(config.tick_rate);
-                }
-            })
-        };
-        Events {
-            rx,
-            input_handle,
-            tick_handle,
-        }
+            }
+        });
+
+        self.handle = Some(handle);
     }
 
-    pub fn next(&self) -> Result<Event<Key>, mpsc::RecvError> {
-        self.rx.recv()
+    pub fn wait(self) {
+        self.handle.unwrap().join().unwrap_or_else(|_error| {
+            return;
+        });
     }
 }

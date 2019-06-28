@@ -11,19 +11,21 @@ pub enum NoteMessage {
 
 #[derive(Debug, Clone)]
 pub enum Event {
+    None,
     Note {
         message: NoteMessage,
         note: u8,
         velocity: u8,
     },
-    Signal {
-        message: String,
-    },
     Key {
         key: Key,
     },
-    Pause {},
-    Quit {},
+    Pause,
+    Quit,
+    CursorUp,
+    CursorDown,
+    CursorLeft,
+    CursorRight,
 }
 
 #[derive(Debug)]
@@ -69,14 +71,15 @@ impl EventBus {
         let handle = thread::spawn(move || {
             let inner = &innert_copy.lock().unwrap();
 
-            println!("{:?}", inner);
-
             loop {
                 select! {
                     recv(inner.local_receiver) -> event => {
                         let my_event = event.unwrap();
                         for e in inner.all_emitters.clone() {
-                            e.send(my_event.clone()).unwrap();
+                            match e.send(my_event.clone()) {
+                                Err(_) => {},
+                                _ => {}
+                            }
                         };
                     }
                 }

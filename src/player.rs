@@ -16,7 +16,7 @@ impl Player {
     ) -> Player {
         let handle = thread::spawn(move || {
             let mut rng = rand::thread_rng();
-            let ticker = tick(Duration::from_millis(1000));
+            let ticker = tick(Duration::from_millis(500));
 
             let mut play_note = |note: u8, duration: u64| {
                 let velocity = rng.gen_range(10, 100);

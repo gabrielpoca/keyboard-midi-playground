@@ -7,13 +7,12 @@ use std::sync::{Arc, RwLock};
 mod events;
 mod output;
 mod player;
-mod render;
-mod user_events;
+mod ui;
 
 use events::EventBus;
 use output::Output;
 use player::Player;
-use render::Render;
+use ui::Render;
 
 fn main() {
     match run() {

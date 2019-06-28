@@ -1,5 +1,5 @@
+use crossbeam_channel::tick;
 use rand::Rng;
-use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
@@ -9,11 +9,14 @@ use crate::events::{Event, NoteMessage};
 pub struct Player {
     handle: thread::JoinHandle<()>,
 }
-
 impl Player {
-    pub fn new(conn: Arc<Mutex<(u8)>>, events_emitter: crossbeam_channel::Sender<Event>) -> Player {
+    pub fn new(
+        events_emitter: crossbeam_channel::Sender<Event>,
+        events_recv: crossbeam_channel::Receiver<Event>,
+    ) -> Player {
         let handle = thread::spawn(move || {
             let mut rng = rand::thread_rng();
+            let ticker = tick(Duration::from_millis(1000));
 
             let mut play_note = |note: u8, duration: u64| {
                 let velocity = rng.gen_range(10, 100);
@@ -37,19 +40,48 @@ impl Player {
                     .unwrap();
             };
 
-            for _i in 0..3 {
-                let num = conn.lock().unwrap();
-                let base = *num;
-                let root = 60;
-                std::mem::drop(num);
-                play_note(root + base, 500);
-                play_note(root + 2 + base, 500);
-                play_note(root + 3 + base, 500);
-                play_note(root + 5 + base, 500);
-                play_note(root + 7 + base, 500);
-                play_note(root + 8 + base, 500);
-                play_note(root + 10 + base, 500);
-                play_note(root + 12 + base, 500);
+            let mut index = 0;
+            let mut running = true;
+            let root = 60;
+            let melody = vec![
+                root,
+                root + 2,
+                root + 3,
+                root + 5,
+                root + 7,
+                root + 8,
+                root + 10,
+                root + 12,
+            ];
+
+            loop {
+                select! {
+                    recv(ticker) -> _ => {
+                        if running {
+                            play_note(melody[index], 500);
+
+                            if index == melody.len() - 1 {
+                                index = 0;
+                            } else {
+                                index += 1;
+                            }
+                        }
+                    }
+                    recv(events_recv) -> msg => {
+                        match msg.unwrap() {
+                            Event::Signal { message } => {
+                                if message == "quit" {
+                                    drop(tick);
+                                    break;
+                                }
+                            }
+                            Event::Pause {} => {
+                                running = !running;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             }
         });
 

@@ -22,6 +22,7 @@ pub enum Event {
     Key {
         key: Key,
     },
+    Pause {},
 }
 
 #[derive(Debug)]

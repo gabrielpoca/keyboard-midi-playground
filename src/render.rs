@@ -2,7 +2,7 @@ use crate::events::Event;
 use crossbeam_channel::tick;
 use std::error::Error;
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard};
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 use std::thread;
 use std::time::Duration;
 use termion::event::Key;
@@ -22,11 +22,7 @@ pub struct Render {
 }
 
 impl Render {
-    pub fn new(
-        _base: Arc<Mutex<(u8)>>,
-        logs_m: Arc<RwLock<(Vec<String>)>>,
-        event_bus: &mut EventBus,
-    ) -> Render {
+    pub fn new(logs_m: Arc<RwLock<(Vec<String>)>>, event_bus: &mut EventBus) -> Render {
         let user_input_m = Arc::new(RwLock::new(String::new()));
         let user_input_render_m = user_input_m.clone();
         let user_input_input_m = user_input_m.clone();
@@ -73,6 +69,9 @@ impl Render {
                                     })
                                 .unwrap();
                                 break;
+                            }
+                            Key::Char(' ') => {
+                                events_emitter.send(Event::Pause{}).unwrap();
                             }
                             Key::Char(e) => {
                                 let mut user_input = user_input_m.write().unwrap();
@@ -140,7 +139,6 @@ impl Render {
                 recv(events_recv) -> msg => {
                     match msg.unwrap() {
                         Event::Signal { message } => {
-                            println!("render quit");
                             if message == "quit" {
                                 terminal.clear()?;
                                 break;

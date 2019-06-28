@@ -61,14 +61,12 @@ impl Render {
             select! {
                 recv(events_recv) -> msg => {
                     match msg.unwrap() {
+                        Event::Quit {} => {
+                            break;
+                        }
                         Event::Key { key } => match key {
                             Key::Char('q') => {
-                                events_emitter
-                                    .send(Event::Signal {
-                                        message: "quit".into(),
-                                    })
-                                .unwrap();
-                                break;
+                                events_emitter.send(Event::Quit{}).unwrap();
                             }
                             Key::Char(' ') => {
                                 events_emitter.send(Event::Pause{}).unwrap();
@@ -138,11 +136,9 @@ impl Render {
                 }
                 recv(events_recv) -> msg => {
                     match msg.unwrap() {
-                        Event::Signal { message } => {
-                            if message == "quit" {
-                                terminal.clear()?;
-                                break;
-                            }
+                        Event::Quit { } => {
+                            terminal.clear()?;
+                            break;
                         },
                         _ => {}
                     }

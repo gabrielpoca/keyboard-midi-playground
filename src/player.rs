@@ -69,11 +69,9 @@ impl Player {
                     }
                     recv(events_recv) -> msg => {
                         match msg.unwrap() {
-                            Event::Signal { message } => {
-                                if message == "quit" {
-                                    drop(tick);
-                                    break;
-                                }
+                            Event::Quit { } => {
+                                drop(tick);
+                                break;
                             }
                             Event::Pause {} => {
                                 running = !running;

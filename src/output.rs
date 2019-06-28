@@ -42,10 +42,8 @@ impl Output {
                                 let mut logs = logs_m.write().unwrap();
                                 logs.insert(0, format!("note: {}", note));
                             },
-                            Event::Signal { message } => {
-                                if message == "quit" {
-                                    break;
-                                }
+                            Event::Quit { } => {
+                                break;
                             }
                             _ => {}
                         }

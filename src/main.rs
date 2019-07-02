@@ -1,20 +1,24 @@
 #[macro_use]
 extern crate crossbeam_channel;
+extern crate env_logger;
+extern crate log;
 
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 
 mod events;
 mod output;
-mod player;
+mod scale;
 mod ui;
 
 use events::EventBus;
 use output::Output;
-use player::Player;
+use scale::Player;
 use ui::Render;
 
 fn main() {
+    env_logger::init();
+
     match run() {
         Ok(_) => println!("Done!"),
         Err(err) => println!("Error: {}", err.description()),

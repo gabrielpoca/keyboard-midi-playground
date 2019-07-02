@@ -32,7 +32,7 @@ impl Output {
             loop {
                 select! {
                     recv(events_recv) -> msg => {
-                        match msg.unwrap() {
+                        match msg.unwrap_or_else({|_| Event::None }) {
                             Event::Note {
                                 message,
                                 note,

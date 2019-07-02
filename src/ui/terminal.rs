@@ -115,7 +115,7 @@ pub fn handle(
                         let all = logs_m.read().unwrap();
 
                         let items = all.iter().map(|item| {
-                                Text::styled(format!("{}", item), Style::default().fg(Color::White))
+                            Text::styled(format!("{}", item), Style::default().fg(Color::White))
                         });
 
                         List::new(items)

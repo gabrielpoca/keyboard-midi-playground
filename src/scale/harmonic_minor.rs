@@ -1,5 +1,6 @@
 use super::scale::Scale;
 
+#[derive(Debug, Copy, Clone)]
 pub struct HarmonicMinor {
     pub root: u32,
 }
@@ -24,20 +25,11 @@ impl Scale for HarmonicMinor {
     fn note(&self, position: i32) -> u32 {
         let notes = self.notes();
         let mut position = position;
-        let mut base: i32 = 0;
 
         while position >= notes.len() as i32 {
             position -= notes.len() as i32;
-            base += 12;
         }
 
-        while position < 0 {
-            position += notes.len() as i32;
-            base -= 12;
-        }
-
-        let note = notes[position as usize] as i32;
-
-        return (note + base) as u32;
+        return notes[position as usize];
     }
 }

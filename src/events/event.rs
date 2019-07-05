@@ -23,4 +23,5 @@ pub enum Event {
     CursorDown,
     CursorLeft,
     CursorRight,
+    Tick,
 }

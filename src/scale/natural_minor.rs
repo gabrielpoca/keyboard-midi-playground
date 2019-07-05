@@ -1,5 +1,6 @@
 use super::scale::Scale;
 
+#[derive(Debug, Copy, Clone)]
 pub struct NaturalMinor {
     pub root: u32,
 }

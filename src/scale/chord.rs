@@ -1,4 +1,4 @@
-use super::player::PlayerNote;
+use crate::player::PlayerNote;
 use super::scale::Scale;
 
 pub struct Chord<T: Scale> {

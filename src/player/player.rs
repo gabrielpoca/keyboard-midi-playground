@@ -1,13 +1,11 @@
-use super::chord::Chord;
-use super::harmonic_minor::HarmonicMinor;
-use super::natural_minor::NaturalMinor;
-use super::scale::Scale;
+use crate::scale::Chord;
+use crate::scale::NaturalMinor;
 use crate::events::{Event, NoteMessage};
-use crossbeam_channel::tick;
+use crate::player::Metronome;
+use crossbeam_channel::{tick, Receiver, Sender};
 use log::error;
 use rand::Rng;
 use std::thread;
-use std::time::Duration;
 
 pub struct Player {
     handle: thread::JoinHandle<()>,
@@ -26,20 +24,10 @@ struct PlayerState {
 }
 
 impl PlayerState {
-    pub fn new<S: Scale>(scale: S) -> PlayerState {
-        let mut notes: Vec<Vec<PlayerNote>> = Vec::new();
-        let my_scale = [
-            scale.note(-3),
-            scale.note(0),
-            scale.note(-3),
-            scale.note(0),
-            scale.note(4),
-            scale.note(2),
-            scale.note(3),
-            scale.note(1),
-        ];
+    pub fn new(my_notes: Vec<u32>) -> PlayerState {
+        let mut notes = Vec::new();
 
-        for note in my_scale.iter() {
+        for note in my_notes.iter() {
             notes.push(vec![PlayerNote {
                 note: *note,
                 message: NoteMessage::On,
@@ -84,15 +72,20 @@ impl PlayerState {
 
 impl Player {
     pub fn new(
-        events_emitter: crossbeam_channel::Sender<Event>,
-        events_recv: crossbeam_channel::Receiver<Event>,
+        tick: Receiver<Event>,
+        events_emitter: Sender<Event>,
+        events_recv: Receiver<Event>,
+        play_chord: bool,
+        notes: Vec<u32>,
+        scale: NaturalMinor,
     ) -> Player {
+        let scale = scale.clone();
+
         let handle = thread::spawn(move || {
             let mut rng = rand::thread_rng();
-            let ticker = tick(Duration::from_millis(200));
 
-            let mut state = PlayerState::new(HarmonicMinor::new(60));
-            let chord = Chord::new(HarmonicMinor::new(60));
+            let mut state = PlayerState::new(notes);
+            let chord = Chord::new(scale);
 
             let mut play_note = |player_note: PlayerNote| {
                 let velocity = rng.gen_range(10, 100);
@@ -108,15 +101,19 @@ impl Player {
 
             loop {
                 select! {
-                    recv(ticker) -> _ => {
+                    recv(tick) -> _ => {
                         if state.playing() {
                             let notes = state.next();
 
                             for n in notes {
-                                let notes = chord.get_notes(n);
+                                if play_chord {
+                                    let notes = chord.get_notes(n);
 
-                                for pn in notes {
-                                    play_note(pn);
+                                    for pn in notes {
+                                        play_note(pn);
+                                    }
+                                } else {
+                                    play_note(n);
                                 }
                             }
                         }

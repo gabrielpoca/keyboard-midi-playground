@@ -7,6 +7,7 @@ use std::time::Instant;
 
 #[derive(Debug)]
 struct MetronomeInner {
+    recv: Receiver<Event>,
     tick: Receiver<Instant>,
     all_emitters: Vec<Sender<Event>>,
 }
@@ -18,9 +19,10 @@ pub struct Metronome {
 }
 
 impl Metronome {
-    pub fn new(speed: u64) -> Metronome {
+    pub fn new(recv: Receiver<Event>, speed: u64) -> Metronome {
         return Metronome {
             inner: Arc::new(Mutex::new(MetronomeInner {
+                recv,
                 tick: tick(Duration::from_millis(speed)),
                 all_emitters: Vec::new(),
             })),
@@ -46,6 +48,14 @@ impl Metronome {
 
             loop {
                 select! {
+                    recv(inner.recv) -> msg => {
+                        match msg.unwrap() {
+                            Event::Quit => {
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
                     recv(inner.tick) -> _ => {
                         let my_event = Event::Tick;
                         for e in inner.all_emitters.clone() {

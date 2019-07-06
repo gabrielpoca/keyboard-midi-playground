@@ -1,9 +1,7 @@
+use crate::events::{Event, NoteMessage};
 use crate::scale::Chord;
 use crate::scale::NaturalMinor;
-use crate::events::{Event, NoteMessage};
-use crate::player::Metronome;
-use crossbeam_channel::{tick, Receiver, Sender};
-use log::error;
+use crossbeam_channel::{Receiver, Sender};
 use rand::Rng;
 use std::thread;
 
@@ -45,7 +43,7 @@ impl PlayerState {
         return PlayerState {
             current: 0,
             notes: notes,
-            running: true,
+            running: false,
         };
     }
 
@@ -113,6 +111,7 @@ impl Player {
                                         play_note(pn);
                                     }
                                 } else {
+                                    println!("ASDASD {:?}", n);
                                     play_note(n);
                                 }
                             }

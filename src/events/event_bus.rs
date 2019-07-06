@@ -56,6 +56,13 @@ impl EventBus {
                                 _ => {}
                             }
                         };
+
+                        match my_event {
+                            Event::Quit => {
+                                break;
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }

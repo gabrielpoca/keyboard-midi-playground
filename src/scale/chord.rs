@@ -1,5 +1,5 @@
-use crate::player::PlayerNote;
 use super::scale::Scale;
+use crate::player::PlayerNote;
 
 pub struct Chord<T: Scale> {
     scale: T,

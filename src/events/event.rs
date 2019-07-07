@@ -14,14 +14,6 @@ pub enum Event {
         note: u8,
         velocity: u8,
     },
-    Key {
-        key: Key,
-    },
-    Pause,
     Quit,
-    CursorUp,
-    CursorDown,
-    CursorLeft,
-    CursorRight,
     Tick,
 }

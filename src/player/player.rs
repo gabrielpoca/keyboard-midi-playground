@@ -1,8 +1,10 @@
+use crate::app_state::*;
 use crate::events::{Event, NoteMessage};
 use crate::scale::Chord;
 use crate::scale::NaturalMinor;
 use crossbeam_channel::{Receiver, Sender};
 use rand::Rng;
+use std::sync::*;
 use std::thread;
 
 pub struct Player {
@@ -18,7 +20,6 @@ pub struct PlayerNote {
 struct PlayerState {
     current: usize,
     notes: Vec<Vec<PlayerNote>>,
-    running: bool,
 }
 
 impl PlayerState {
@@ -43,7 +44,6 @@ impl PlayerState {
         return PlayerState {
             current: 0,
             notes: notes,
-            running: false,
         };
     }
 
@@ -58,18 +58,11 @@ impl PlayerState {
 
         return note;
     }
-
-    pub fn playing(&self) -> bool {
-        return self.running;
-    }
-
-    pub fn toggle_playing(&mut self) {
-        self.running = !self.running;
-    }
 }
 
 impl Player {
     pub fn new(
+        app_state: Arc<RwLock<AppState>>,
         tick: Receiver<Event>,
         events_emitter: Sender<Event>,
         events_recv: Receiver<Event>,
@@ -100,7 +93,7 @@ impl Player {
             loop {
                 select! {
                     recv(tick) -> _ => {
-                        if state.playing() {
+                        if app_state.read().unwrap().playing() {
                             let notes = state.next();
 
                             for n in notes {
@@ -122,9 +115,6 @@ impl Player {
                             Event::Quit => {
                                 drop(tick);
                                 break;
-                            }
-                            Event::Pause => {
-                                state.toggle_playing();
                             }
                             _ => {}
                         }

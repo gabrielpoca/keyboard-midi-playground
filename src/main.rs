@@ -6,17 +6,20 @@ extern crate log;
 use player::Metronome;
 use std::error::Error;
 
+mod app_state;
 mod events;
 mod output;
 mod player;
 mod scale;
 mod ui;
 
+use app_state::*;
 use events::EventBus;
 use output::Output;
 use player::Player;
 use scale::NaturalMinor;
 use scale::Scale;
+use std::sync::*;
 use ui::Render;
 
 fn main() {
@@ -29,6 +32,7 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<Error>> {
+    let mut app_state = Arc::new(RwLock::new(AppState::new()));
     let mut event_bus = EventBus::new();
     let mut metronome = Metronome::new(event_bus.new_receive(), 50);
 
@@ -46,6 +50,7 @@ fn run() -> Result<(), Box<Error>> {
 
     let output = Output::new(event_bus.new_receive());
     let player = Player::new(
+        app_state.clone(),
         metronome.new_receive(),
         event_bus.emitter.clone(),
         event_bus.new_receive(),
@@ -54,12 +59,12 @@ fn run() -> Result<(), Box<Error>> {
         scale,
     );
 
-    let render = Render::new(&mut event_bus);
+    let mut render = Render::new(app_state.clone(), &mut event_bus);
 
     event_bus.start();
     metronome.start();
 
-    render.start();
+    render.handle().unwrap();
 
     println!("Stopping");
 

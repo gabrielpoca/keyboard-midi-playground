@@ -12,4 +12,8 @@ rand = "0.6.5"
 crossbeam-channel = "0.3.8"
 log = "0.4"
 env_logger = "0.6.2"
-sdl2 = "0.32.2"
+
+[dependencies.sdl2]
+version = "0.32.2"
+default-features = false
+features = ["ttf"]

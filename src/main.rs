@@ -59,7 +59,7 @@ fn run() -> Result<(), Box<Error>> {
         scale,
     );
 
-    let mut render = Render::new(app_state.clone(), &mut event_bus);
+    let mut render = Render::new(app_state.clone(), scale.clone(), &mut event_bus);
 
     event_bus.start();
     metronome.start();

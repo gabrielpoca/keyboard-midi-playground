@@ -3,6 +3,8 @@ extern crate sdl2;
 use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
+use crate::scale::Chord;
+use crate::scale::*;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
 use sdl2::event::Event;
@@ -24,12 +26,21 @@ pub struct Render {
     pub recv: Receiver<events::Event>,
     pub emitter: Sender<events::Event>,
     pub app_state: Arc<RwLock<AppState>>,
+    pub chord: Chord<NaturalMinor>,
+    pub scale: NaturalMinor,
 }
 
 impl Render {
-    pub fn new(app_state: Arc<RwLock<AppState>>, event_bus: &mut EventBus) -> Render {
+    pub fn new(
+        app_state: Arc<RwLock<AppState>>,
+        scale: NaturalMinor,
+        event_bus: &mut EventBus,
+    ) -> Render {
         let events_recv = event_bus.new_receive();
+
         return Render {
+            scale,
+            chord: Chord::new(scale),
             app_state,
             recv: events_recv,
             emitter: event_bus.emitter.clone(),
@@ -86,7 +97,8 @@ impl Render {
                         ..
                     } => match keycode {
                         Some(Keycode::A {}) | Some(Keycode::S) | Some(Keycode::D)
-                        | Some(Keycode::F) | Some(Keycode::G) | Some(Keycode::H) => {
+                        | Some(Keycode::F) | Some(Keycode::G) | Some(Keycode::H)
+                        | Some(Keycode::J) | Some(Keycode::K) => {
                             self.handle_key_on(keycode.unwrap());
                         }
                         Some(Keycode::Space {}) => {
@@ -104,7 +116,8 @@ impl Render {
                         ..
                     } => match keycode {
                         Some(Keycode::A {}) | Some(Keycode::S) | Some(Keycode::D)
-                        | Some(Keycode::F) | Some(Keycode::G) | Some(Keycode::H) => {
+                        | Some(Keycode::F) | Some(Keycode::G) | Some(Keycode::H)
+                        | Some(Keycode::J) | Some(Keycode::K) => {
                             self.handle_key_off(keycode.unwrap());
                         }
                         _ => {}
@@ -122,35 +135,47 @@ impl Render {
 
     fn handle_key_on(&self, keycode: Keycode) {
         info!("ON {}", keycode);
-        self.emitter
-            .send(events::Event::Note {
-                message: events::NoteMessage::On,
-                note: 60 + self.keycode_to_midi(keycode),
-                velocity: 10,
-            })
-            .unwrap();
+        let notes = self.keycode_to_midi(keycode);
+
+        for note in notes.iter() {
+            self.emitter
+                .send(events::Event::Note {
+                    message: events::NoteMessage::On,
+                    note: *note as u8,
+                    velocity: 10,
+                })
+                .unwrap();
+        }
     }
 
     fn handle_key_off(&self, keycode: Keycode) {
         info!("OFF {}", keycode);
-        self.emitter
-            .send(events::Event::Note {
-                message: events::NoteMessage::Off,
-                note: 60 + self.keycode_to_midi(keycode),
-                velocity: 10,
-            })
-            .unwrap();
+        let notes = self.keycode_to_midi(keycode);
+
+        for note in notes.iter() {
+            self.emitter
+                .send(events::Event::Note {
+                    message: events::NoteMessage::Off,
+                    note: *note as u8,
+                    velocity: 10,
+                })
+                .unwrap();
+        }
     }
 
-    fn keycode_to_midi(&self, keycode: Keycode) -> u8 {
-        match keycode {
+    fn keycode_to_midi(&self, keycode: Keycode) -> Vec<u32> {
+        let index = match keycode {
             Keycode::A => 0,
             Keycode::S => 1,
             Keycode::D => 2,
             Keycode::F => 3,
-            Keycode::G => 5,
-            Keycode::H => 6,
+            Keycode::G => 4,
+            Keycode::H => 5,
+            Keycode::J => 6,
+            Keycode::K => 7,
             _ => 0,
-        }
+        };
+
+        return self.chord.get(self.scale.note(index));
     }
 }

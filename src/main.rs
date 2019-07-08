@@ -15,8 +15,8 @@ mod ui;
 use app_state::*;
 use events::EventBus;
 use output::Output;
-use scale::NaturalMinor;
 use scale::Scale;
+use scale::*;
 use std::sync::*;
 use ui::Render;
 
@@ -30,17 +30,16 @@ fn main() {
 }
 
 fn run() -> Result<(), Box<Error>> {
-    let mut app_state = Arc::new(RwLock::new(AppState::new()));
+    let app_state = Arc::new(RwLock::new(AppState::new()));
     let mut event_bus = EventBus::new();
 
-    let scale: NaturalMinor = Scale::new(48);
+    let scale: HarmonicMinor = Scale::new(48);
 
     let output = Output::new(event_bus.new_receive());
 
-    let mut render = Render::new(app_state.clone(), scale.clone(), &mut event_bus);
+    let render = Render::new(app_state.clone(), scale.clone(), &mut event_bus);
 
     event_bus.start();
-
     render.handle().unwrap();
 
     info!("Stopping");

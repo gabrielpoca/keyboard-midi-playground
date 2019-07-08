@@ -3,7 +3,7 @@ extern crate sdl2;
 use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
-use crate::scale::Chord;
+use crate::scale::chord;
 use crate::scale::*;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
@@ -26,7 +26,6 @@ pub struct Render<T: Scale> {
     pub recv: Receiver<events::Event>,
     pub emitter: Sender<events::Event>,
     pub app_state: Arc<RwLock<AppState>>,
-    pub chord: Chord<T>,
     pub scale: T,
 }
 
@@ -35,7 +34,6 @@ impl<T: Scale> Render<T> {
         let events_recv = event_bus.new_receive();
 
         return Render {
-            chord: Chord::new(scale),
             scale,
             app_state,
             recv: events_recv,
@@ -169,6 +167,6 @@ impl<T: Scale> Render<T> {
             _ => 0,
         };
 
-        return self.chord.get(self.scale.note(index));
+        return chord::get(self.scale, self.scale.note(index));
     }
 }

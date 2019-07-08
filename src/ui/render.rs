@@ -22,25 +22,21 @@ macro_rules! rect(
     )
 );
 
-pub struct Render {
+pub struct Render<T: Scale> {
     pub recv: Receiver<events::Event>,
     pub emitter: Sender<events::Event>,
     pub app_state: Arc<RwLock<AppState>>,
-    pub chord: Chord<NaturalMinor>,
-    pub scale: NaturalMinor,
+    pub chord: Chord<T>,
+    pub scale: T,
 }
 
-impl Render {
-    pub fn new(
-        app_state: Arc<RwLock<AppState>>,
-        scale: NaturalMinor,
-        event_bus: &mut EventBus,
-    ) -> Render {
+impl<T: Scale> Render<T> {
+    pub fn new(app_state: Arc<RwLock<AppState>>, scale: T, event_bus: &mut EventBus) -> Self {
         let events_recv = event_bus.new_receive();
 
         return Render {
-            scale,
             chord: Chord::new(scale),
+            scale,
             app_state,
             recv: events_recv,
             emitter: event_bus.emitter.clone(),
@@ -65,17 +61,14 @@ impl Render {
         let texture_creator = canvas.texture_creator();
 
         let mut event_pump = sdl_context.event_pump().unwrap();
-        let mut i = 0;
 
         'running: loop {
-            i = (i + 1) % 255;
-
-            canvas.set_draw_color(Color::RGB(0, 255, 255));
+            canvas.set_draw_color(Color::RGB(0, 0, 0));
             canvas.clear();
 
             let surface = font
                 .render(&self.app_state.read().unwrap().playing_label())
-                .blended(Color::RGBA(255, 0, 0, 255))
+                .blended(Color::RGBA(255, 255, 255, 255))
                 .map_err(|e| e.to_string())?;
             let texture = texture_creator
                 .create_texture_from_surface(&surface)

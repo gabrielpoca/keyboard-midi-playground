@@ -15,5 +15,4 @@ pub enum Event {
         velocity: u8,
     },
     Quit,
-    Tick,
 }

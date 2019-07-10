@@ -62,18 +62,23 @@ impl Render {
             canvas.set_draw_color(Color::RGB(0, 0, 0));
             canvas.clear();
 
-            let surface = font
-                .render("Natural Minor")
-                .blended(Color::RGBA(255, 255, 255, 255))
-                .map_err(|e| e.to_string())?;
-            let texture = texture_creator
-                .create_texture_from_surface(&surface)
-                .map_err(|e| e.to_string())?;
+            {
+                let app_state = self.app_state.write().unwrap();
+                let scale = &app_state.scale;
 
-            let TextureQuery { width, height, .. } = texture.query();
-            let target = rect!(0, 0, width, height);
+                let surface = font
+                    .render(&scale.label())
+                    .blended(Color::RGBA(255, 255, 255, 255))
+                    .map_err(|e| e.to_string())?;
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .map_err(|e| e.to_string())?;
 
-            canvas.copy(&texture, None, Some(target))?;
+                let TextureQuery { width, height, .. } = texture.query();
+                let target = rect!(0, 0, width, height);
+
+                canvas.copy(&texture, None, Some(target))?;
+            }
 
             for event in event_pump.poll_iter() {
                 match event {
@@ -91,6 +96,11 @@ impl Render {
                             self.handle_key_on(keycode.unwrap());
                         }
                         Some(Keycode::Num1 {}) => {
+                            let scale = NaturalMinor::new(60);
+                            let mut app_state = self.app_state.write().unwrap();
+                            app_state.set_scale(Box::new(scale));
+                        }
+                        Some(Keycode::Num2 {}) => {
                             let scale = HarmonicMinor::new(60);
                             let mut app_state = self.app_state.write().unwrap();
                             app_state.set_scale(Box::new(scale));

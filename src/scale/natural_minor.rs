@@ -12,6 +12,10 @@ impl NaturalMinor {
 }
 
 impl Scale for NaturalMinor {
+    fn label(&self) -> String {
+        return "Natural Minor".into();
+    }
+
     fn notes(&self) -> Vec<u32> {
         let n1: u32 = self.root as u32;
         let n2 = n1 + 2;

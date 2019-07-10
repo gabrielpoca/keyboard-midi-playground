@@ -22,19 +22,17 @@ macro_rules! rect(
     )
 );
 
-pub struct Render<T: Scale> {
+pub struct Render {
     pub recv: Receiver<events::Event>,
     pub emitter: Sender<events::Event>,
     pub app_state: Arc<RwLock<AppState>>,
-    pub scale: T,
 }
 
-impl<T: Scale> Render<T> {
-    pub fn new(app_state: Arc<RwLock<AppState>>, scale: T, event_bus: &mut EventBus) -> Self {
+impl Render {
+    pub fn new(app_state: Arc<RwLock<AppState>>, event_bus: &mut EventBus) -> Self {
         let events_recv = event_bus.new_receive();
 
         return Render {
-            scale,
             app_state,
             recv: events_recv,
             emitter: event_bus.emitter.clone(),
@@ -65,7 +63,7 @@ impl<T: Scale> Render<T> {
             canvas.clear();
 
             let surface = font
-                .render(&self.app_state.read().unwrap().playing_label())
+                .render("Natural Minor")
                 .blended(Color::RGBA(255, 255, 255, 255))
                 .map_err(|e| e.to_string())?;
             let texture = texture_creator
@@ -92,8 +90,10 @@ impl<T: Scale> Render<T> {
                         | Some(Keycode::J) | Some(Keycode::K) => {
                             self.handle_key_on(keycode.unwrap());
                         }
-                        Some(Keycode::Space {}) => {
-                            self.app_state.write().unwrap().toggle_play();
+                        Some(Keycode::Num1 {}) => {
+                            let scale = HarmonicMinor::new(60);
+                            let mut app_state = self.app_state.write().unwrap();
+                            app_state.set_scale(Box::new(scale));
                         }
                         Some(Keycode::Q {}) => {
                             self.emitter.send(events::Event::Quit)?;
@@ -167,6 +167,9 @@ impl<T: Scale> Render<T> {
             _ => 0,
         };
 
-        return chord::get(self.scale, self.scale.note(index));
+        let app_state = self.app_state.read().unwrap();
+        let scale = &app_state.scale;
+
+        return chord::get(scale, scale.note(index));
     }
 }

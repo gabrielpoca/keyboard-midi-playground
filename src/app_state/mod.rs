@@ -1,30 +1,20 @@
+use crate::scale::Scale;
+
 pub struct AppState {
     input_mode: u8,
-    playing: bool,
+    pub scale: Box<dyn Scale>,
 }
 
 impl AppState {
-    pub fn new() -> AppState {
+    pub fn new(scale: Box<dyn Scale>) -> Self {
         return AppState {
-            playing: false,
             input_mode: 0,
+            scale,
         };
     }
 
-    pub fn playing(&self) -> bool {
-        return self.playing;
-    }
-
-    pub fn playing_label(&self) -> String {
-        if self.playing() {
-            return "Playing".into();
-        } else {
-            return "Paused".into();
-        }
-    }
-
-    pub fn toggle_play(&mut self) {
-        self.playing = !self.playing;
+    pub fn set_scale(&mut self, scale: Box<dyn Scale>) {
+        self.scale = scale;
     }
 
     pub fn toggle_input_mode(&mut self) {

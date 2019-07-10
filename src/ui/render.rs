@@ -105,9 +105,31 @@ impl Render {
                             let mut app_state = self.app_state.write().unwrap();
                             app_state.set_scale(Box::new(scale));
                         }
+                        Some(Keycode::Num3 {}) => {
+                            let scale = MelodicMinor::new(60);
+                            let mut app_state = self.app_state.write().unwrap();
+                            app_state.set_scale(Box::new(scale));
+                        }
                         Some(Keycode::Q {}) => {
                             self.emitter.send(events::Event::Quit)?;
                             break 'running;
+                        }
+                        Some(Keycode::Z {}) => {
+                            let mut app_state = self.app_state.write().unwrap();
+                            let scale = &mut app_state.scale;
+                            scale.decrease_root();
+                        }
+                        Some(Keycode::X {}) => {
+                            let mut app_state = self.app_state.write().unwrap();
+                            let scale = &mut app_state.scale;
+                            scale.increase_root();
+                        }
+                        Some(Keycode::Space {}) => {
+                            let mut app_state = self.app_state.write().unwrap();
+                            app_state.toggle_play_mode();
+                        }
+                        Some(key) => {
+                            info!("key {:?}", key);
                         }
                         _ => {}
                     },
@@ -136,7 +158,14 @@ impl Render {
 
     fn handle_key_on(&self, keycode: Keycode) {
         info!("ON {}", keycode);
-        let notes = self.keycode_to_midi(keycode);
+        let app_state = self.app_state.read().unwrap();
+        let note = self.keycode_to_midi(keycode);
+        let mut notes: Vec<u32> = [note].to_vec();
+
+        if app_state.play_chord() {
+            let scale = &app_state.scale;
+            notes = chord::get(scale, note);
+        }
 
         for note in notes.iter() {
             self.emitter
@@ -151,7 +180,14 @@ impl Render {
 
     fn handle_key_off(&self, keycode: Keycode) {
         info!("OFF {}", keycode);
-        let notes = self.keycode_to_midi(keycode);
+        let app_state = self.app_state.read().unwrap();
+        let note = self.keycode_to_midi(keycode);
+        let mut notes: Vec<u32> = [note].to_vec();
+
+        if app_state.play_chord() {
+            let scale = &app_state.scale;
+            notes = chord::get(scale, note);
+        }
 
         for note in notes.iter() {
             self.emitter
@@ -164,7 +200,7 @@ impl Render {
         }
     }
 
-    fn keycode_to_midi(&self, keycode: Keycode) -> Vec<u32> {
+    fn keycode_to_midi(&self, keycode: Keycode) -> u32 {
         let index = match keycode {
             Keycode::A => 0,
             Keycode::S => 1,
@@ -180,6 +216,6 @@ impl Render {
         let app_state = self.app_state.read().unwrap();
         let scale = &app_state.scale;
 
-        return chord::get(scale, scale.note(index));
+        return scale.note(index);
     }
 }

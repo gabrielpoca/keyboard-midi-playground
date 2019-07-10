@@ -1,8 +1,14 @@
 use crate::scale::Scale;
 
+pub enum PlayMode {
+    Single,
+    Chord,
+}
+
 pub struct AppState {
     input_mode: u8,
     pub scale: Box<dyn Scale>,
+    pub play_mode: PlayMode,
 }
 
 impl AppState {
@@ -10,6 +16,7 @@ impl AppState {
         return AppState {
             input_mode: 0,
             scale,
+            play_mode: PlayMode::Single,
         };
     }
 
@@ -23,5 +30,19 @@ impl AppState {
         } else {
             self.input_mode = 0
         }
+    }
+
+    pub fn toggle_play_mode(&mut self) {
+        match self.play_mode {
+            PlayMode::Single => self.play_mode = PlayMode::Chord,
+            PlayMode::Chord => self.play_mode = PlayMode::Single,
+        }
+    }
+
+    pub fn play_chord(&self) -> bool {
+        return match self.play_mode {
+            PlayMode::Single => false,
+            PlayMode::Chord => true,
+        };
     }
 }

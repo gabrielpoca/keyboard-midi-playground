@@ -1,17 +1,17 @@
 use super::scale::Scale;
 
 #[derive(Debug)]
-pub struct HarmonicMinor {
+pub struct MelodicMinor {
     pub root: u32,
 }
 
-impl HarmonicMinor {
-    pub fn new(root: u32) -> HarmonicMinor {
-        return HarmonicMinor { root };
+impl MelodicMinor {
+    pub fn new(root: u32) -> MelodicMinor {
+        return MelodicMinor { root };
     }
 }
 
-impl Scale for HarmonicMinor {
+impl Scale for MelodicMinor {
     fn increase_root(&mut self) {
         self.root = self.root + 12;
     }
@@ -21,7 +21,7 @@ impl Scale for HarmonicMinor {
     }
 
     fn label(&self) -> String {
-        return "Harmonic Minor".into();
+        return "Melodic Minor".into();
     }
 
     fn notes(&self) -> Vec<u32> {
@@ -30,8 +30,8 @@ impl Scale for HarmonicMinor {
         let n3 = n2 + 1;
         let n4 = n3 + 2;
         let n5 = n4 + 2;
-        let n6 = n5 + 1;
-        let n7 = n6 + 3;
+        let n6 = n5 + 2;
+        let n7 = n6 + 2;
 
         return vec![n1, n2, n3, n4, n5, n6, n7];
     }

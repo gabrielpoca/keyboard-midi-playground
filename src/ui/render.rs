@@ -16,11 +16,90 @@ use std::error::Error;
 use std::sync::*;
 use std::time::Duration;
 
+static SCREEN_WIDTH: u32 = 800;
+static SCREEN_HEIGHT: u32 = 600;
+
 macro_rules! rect(
     ($x:expr, $y:expr, $w:expr, $h:expr) => (
         Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
     )
 );
+
+fn get_centered_rect(
+    rect_width: u32,
+    rect_height: u32,
+    cons_width: u32,
+    cons_height: u32,
+    cx: i32,
+    cy: i32,
+) -> Rect {
+    let wr = rect_width as f32 / cons_width as f32;
+    let hr = rect_height as f32 / cons_height as f32;
+
+    let (w, h) = if wr > 1f32 || hr > 1f32 {
+        if wr > hr {
+            let h = (rect_height as f32 / wr) as u32;
+            (cons_width as u32, h)
+        } else {
+            let w = (rect_width as f32 / hr) as u32;
+            (w, cons_height as u32)
+        }
+    } else {
+        (rect_width as u32, rect_height as u32)
+    };
+
+    let cx = cx;
+    let cy = cy;
+
+    let cx = (cx as u32) + (cons_width - w) / 2;
+    let cy = (cy as u32) + (cons_width - h) / 2;
+
+    rect!(cx as i32, cy as i32, w, h)
+}
+
+fn get_top_left_rect(rect_width: u32, rect_height: u32, cons_width: u32, cons_height: u32) -> Rect {
+    let wr = rect_width as f32 / cons_width as f32;
+    let hr = rect_height as f32 / cons_height as f32;
+
+    let (w, h) = if wr > 1f32 || hr > 1f32 {
+        if wr > hr {
+            let h = (rect_height as f32 / wr) as i32;
+            (cons_width as i32, h)
+        } else {
+            let w = (rect_width as f32 / hr) as i32;
+            (w, cons_height as i32)
+        }
+    } else {
+        (rect_width as i32, rect_height as i32)
+    };
+
+    rect!(22, 22, w, h)
+}
+
+static ROW_LENGTH: u32 = 9;
+
+fn get_keyboard_rects(cons_width: u32, cons_height: u32) -> (Vec<Rect>, Vec<(Rect, String)>) {
+    let spacing = 15;
+    let total_spacing = 8 * spacing;
+    let individual_width = (cons_width - total_spacing) / ROW_LENGTH;
+
+    let mut res = Vec::new();
+    let mut keycode = Vec::new();
+
+    for i in 0..ROW_LENGTH {
+        let target = rect! {20 + (i * individual_width) + (i * spacing), 200, individual_width, individual_width};
+        keycode.push((target, "Q".into()));
+        res.push(target);
+    }
+
+    for i in 0..ROW_LENGTH {
+        let target = rect! {20 + (i * individual_width) + (i * spacing), 200 + individual_width + spacing, individual_width, individual_width};
+        keycode.push((target, "A".into()));
+        res.push(target);
+    }
+
+    return (res, keycode);
+}
 
 pub struct Render {
     pub recv: Receiver<events::Event>,
@@ -44,7 +123,7 @@ impl Render {
         let video_subsystem = sdl_context.video().unwrap();
 
         let window = video_subsystem
-            .window("awesome midi player", 800, 600)
+            .window("awesome midi player", SCREEN_WIDTH, SCREEN_HEIGHT)
             .position_centered()
             .build()
             .unwrap();
@@ -75,7 +154,34 @@ impl Render {
                     .map_err(|e| e.to_string())?;
 
                 let TextureQuery { width, height, .. } = texture.query();
-                let target = rect!(0, 0, width, height);
+                let target = get_top_left_rect(width, height, SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3);
+
+                canvas.copy(&texture, None, Some(target))?;
+            }
+
+            canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
+            let (rects, keycodes) = get_keyboard_rects(SCREEN_WIDTH - 40, SCREEN_HEIGHT);
+
+            canvas.draw_rects(&rects)?;
+
+            for (target, key) in keycodes {
+                let surface = font
+                    .render(&key)
+                    .blended(Color::RGBA(255, 255, 255, 255))
+                    .map_err(|e| e.to_string())?;
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .map_err(|e| e.to_string())?;
+
+                let TextureQuery { width, height, .. } = texture.query();
+                let target = get_centered_rect(
+                    width,
+                    height,
+                    target.width(),
+                    target.height(),
+                    target.x,
+                    target.y,
+                );
 
                 canvas.copy(&texture, None, Some(target))?;
             }

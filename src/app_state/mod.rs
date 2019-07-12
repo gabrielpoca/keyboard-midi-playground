@@ -1,4 +1,6 @@
 use crate::scale::Scale;
+use sdl2::keyboard::Keycode;
+use std::collections::HashMap;
 
 pub enum PlayMode {
     Single,
@@ -9,6 +11,7 @@ pub struct AppState {
     input_mode: u8,
     pub scale: Box<dyn Scale>,
     pub play_mode: PlayMode,
+    pub pressed_keys: HashMap<String, bool>,
 }
 
 impl AppState {
@@ -17,6 +20,7 @@ impl AppState {
             input_mode: 0,
             scale,
             play_mode: PlayMode::Single,
+            pressed_keys: HashMap::new(),
         };
     }
 

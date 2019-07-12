@@ -12,12 +12,12 @@ impl NaturalMinor {
 }
 
 impl Scale for NaturalMinor {
-    fn increase_root(&mut self) {
-        self.root = self.root + 12;
+    fn increase_root(&mut self, nr: u32) {
+        self.root = self.root + nr;
     }
 
-    fn decrease_root(&mut self) {
-        self.root = self.root - 12;
+    fn decrease_root(&mut self, nr: u32) {
+        self.root = self.root - nr;
     }
 
     fn label(&self) -> String {

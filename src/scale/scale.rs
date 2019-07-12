@@ -1,6 +1,6 @@
 pub trait Scale {
-    fn increase_root(&mut self);
-    fn decrease_root(&mut self);
+    fn increase_root(&mut self, nr: u32);
+    fn decrease_root(&mut self, nr: u32);
 
     fn label(&self) -> String;
 

@@ -137,11 +137,16 @@ impl Render {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
-        let window = video_subsystem
+        let mut window = video_subsystem
             .window("awesome midi player", SCREEN_WIDTH, SCREEN_HEIGHT)
             .position_centered()
             .build()
             .unwrap();
+
+        match window.set_opacity(0.8) {
+            Ok(_) => {}
+            Err(e) => info!("{:?}", e),
+        }
 
         let mut canvas = window.into_canvas().build().unwrap();
 
@@ -176,6 +181,23 @@ impl Render {
                 let TextureQuery { width, height, .. } = texture.query();
                 //let target = get_top_left_rect(width, height, SCREEN_WIDTH / 3, SCREEN_HEIGHT / 3);
                 let target = rect!(20, 20, width, height);
+
+                canvas.copy(&texture, None, Some(target))?;
+            }
+
+            {
+                let app_state = self.app_state.write().unwrap();
+
+                let surface = font
+                    .render(&app_state.play_mode_label())
+                    .blended(Color::RGBA(255, 255, 255, 255))
+                    .map_err(|e| e.to_string())?;
+                let texture = texture_creator
+                    .create_texture_from_surface(&surface)
+                    .map_err(|e| e.to_string())?;
+
+                let TextureQuery { width, height, .. } = texture.query();
+                let target = rect!(SCREEN_WIDTH - 20 - width, 20, width, height);
 
                 canvas.copy(&texture, None, Some(target))?;
             }

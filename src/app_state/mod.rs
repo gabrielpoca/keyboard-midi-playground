@@ -1,5 +1,4 @@
 use crate::scale::Scale;
-use sdl2::keyboard::Keycode;
 use std::collections::HashMap;
 
 pub enum PlayMode {
@@ -8,7 +7,6 @@ pub enum PlayMode {
 }
 
 pub struct AppState {
-    input_mode: u8,
     pub scale: Box<dyn Scale>,
     pub play_mode: PlayMode,
     pub pressed_keys: HashMap<String, bool>,
@@ -17,7 +15,6 @@ pub struct AppState {
 impl AppState {
     pub fn new(scale: Box<dyn Scale>) -> Self {
         return AppState {
-            input_mode: 0,
             scale,
             play_mode: PlayMode::Single,
             pressed_keys: HashMap::new(),
@@ -26,14 +23,6 @@ impl AppState {
 
     pub fn set_scale(&mut self, scale: Box<dyn Scale>) {
         self.scale = scale;
-    }
-
-    pub fn toggle_input_mode(&mut self) {
-        if self.input_mode == 0 {
-            self.input_mode = 1
-        } else {
-            self.input_mode = 0
-        }
     }
 
     pub fn toggle_play_mode(&mut self) {
@@ -47,6 +36,13 @@ impl AppState {
         return match self.play_mode {
             PlayMode::Single => false,
             PlayMode::Chord => true,
+        };
+    }
+
+    pub fn play_mode_label(&self) -> String {
+        return match self.play_mode {
+            PlayMode::Single => "Single Note".into(),
+            PlayMode::Chord => "Chord".into(),
         };
     }
 }

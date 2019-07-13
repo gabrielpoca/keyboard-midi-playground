@@ -1,5 +1,3 @@
-use termion::event::Key;
-
 #[derive(Debug, Clone, Copy)]
 pub enum NoteMessage {
     On = 0x90,

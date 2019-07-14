@@ -1,5 +1,6 @@
 use super::event::Event;
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use log::info;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -50,6 +51,9 @@ impl EventBus {
                 select! {
                     recv(inner.local_receiver) -> event => {
                         let my_event = event.unwrap();
+
+                        info!("EVENT {:?}", my_event);
+
                         for e in inner.all_emitters.clone() {
                             match e.send(my_event.clone()) {
                                 Err(_) => {},

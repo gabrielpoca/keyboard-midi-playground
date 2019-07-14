@@ -1,6 +1,6 @@
 use super::scale::Scale;
 
-pub fn get(scale: &Box<dyn Scale>, p: u32) -> Vec<u32> {
+pub fn get(scale: &Box<dyn Scale + Sync + Send>, p: u32) -> Vec<u32> {
     let position = scale
         .notes()
         .iter()

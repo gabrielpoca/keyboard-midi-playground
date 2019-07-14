@@ -1,3 +1,4 @@
+use crate::events::*;
 use crate::scale::Scale;
 use std::collections::HashMap;
 
@@ -7,13 +8,13 @@ pub enum PlayMode {
 }
 
 pub struct AppState {
-    pub scale: Box<dyn Scale>,
+    pub scale: Box<dyn Scale + Sync + Send>,
     pub play_mode: PlayMode,
-    pub pressed_keys: HashMap<String, bool>,
+    pub pressed_keys: HashMap<Key, bool>,
 }
 
 impl AppState {
-    pub fn new(scale: Box<dyn Scale>) -> Self {
+    pub fn new(scale: Box<dyn Scale + Sync + Send>) -> Self {
         return AppState {
             scale,
             play_mode: PlayMode::Single,
@@ -21,7 +22,7 @@ impl AppState {
         };
     }
 
-    pub fn set_scale(&mut self, scale: Box<dyn Scale>) {
+    pub fn set_scale(&mut self, scale: Box<dyn Scale + Sync + Send>) {
         self.scale = scale;
     }
 

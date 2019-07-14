@@ -5,6 +5,9 @@ pub struct MelodicMinor {
     pub root: u32,
 }
 
+unsafe impl Sync for MelodicMinor {}
+unsafe impl Send for MelodicMinor {}
+
 impl MelodicMinor {
     pub fn new(root: u32) -> MelodicMinor {
         return MelodicMinor { root };

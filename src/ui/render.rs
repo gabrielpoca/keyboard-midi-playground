@@ -1,10 +1,8 @@
 extern crate sdl2;
 
-use super::keyboard::KeyboardToMidi;
 use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
-use crate::scale::*;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
 use sdl2::event::Event;
@@ -78,13 +76,45 @@ fn get_top_left_rect(rect_width: u32, rect_height: u32, cons_width: u32, cons_he
 
 static ROW_LENGTH: u32 = 10;
 
-static FIRST_ROW: [&str; 10] = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"];
+static FIRST_ROW: [events::Key; 10] = [
+    events::Key::Q,
+    events::Key::W,
+    events::Key::E,
+    events::Key::R,
+    events::Key::T,
+    events::Key::Y,
+    events::Key::U,
+    events::Key::I,
+    events::Key::O,
+    events::Key::P,
+];
 
-static SECOND_ROW: [&str; 9] = ["A", "S", "D", "F", "G", "H", "J", "K", "L"];
+static SECOND_ROW: [events::Key; 9] = [
+    events::Key::A,
+    events::Key::S,
+    events::Key::D,
+    events::Key::F,
+    events::Key::G,
+    events::Key::H,
+    events::Key::J,
+    events::Key::K,
+    events::Key::L,
+];
 
-static THIRD_ROW: [&str; 7] = ["Z", "X", "C", "V", "B", "N", "M"];
+static THIRD_ROW: [events::Key; 7] = [
+    events::Key::Z,
+    events::Key::X,
+    events::Key::C,
+    events::Key::V,
+    events::Key::B,
+    events::Key::N,
+    events::Key::M,
+];
 
-fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec<(Rect, &'a str)>) {
+fn get_keyboard_rects<'a>(
+    cons_width: u32,
+    _cons_height: u32,
+) -> (Vec<Rect>, Vec<(Rect, &'a events::Key)>) {
     let spacing = 10;
     let total_spacing = 8 * spacing;
     let individual_width = (cons_width - total_spacing) / ROW_LENGTH;
@@ -95,21 +125,21 @@ fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec
     for (i, item) in FIRST_ROW.iter().enumerate() {
         let i = i as u32;
         let target = rect! {20 + (i * individual_width) + (i * spacing), 200, individual_width, individual_width};
-        keycode.push((target, *item));
+        keycode.push((target, item));
         res.push(target);
     }
 
     for (i, item) in SECOND_ROW.iter().enumerate() {
         let i = i as u32;
         let target = rect! {28 + (i * individual_width) + (i * spacing), 200 + individual_width + spacing, individual_width, individual_width};
-        keycode.push((target, *item));
+        keycode.push((target, item));
         res.push(target);
     }
 
     for (i, item) in THIRD_ROW.iter().enumerate() {
         let i = i as u32;
         let target = rect! {36 + (i * individual_width) + (i * spacing), 200 + (individual_width + spacing) * 2, individual_width, individual_width};
-        keycode.push((target, *item));
+        keycode.push((target, item));
         res.push(target);
     }
 
@@ -156,11 +186,6 @@ impl Render {
         let texture_creator = canvas.texture_creator();
 
         let mut event_pump = sdl_context.event_pump().unwrap();
-
-        let keyboard_to_midi = KeyboardToMidi {
-            emitter: self.emitter.clone(),
-            app_state: self.app_state.clone(),
-        };
 
         'running: loop {
             canvas.set_draw_color(Color::RGB(0, 0, 0));
@@ -213,7 +238,7 @@ impl Render {
                 for (target, key) in keycodes {
                     let color = Color::RGBA(255, 255, 255, 255);
 
-                    match app_state.pressed_keys.get(key) {
+                    match app_state.pressed_keys.get(&key) {
                         Some(true) => {
                             canvas.set_draw_color(Color::RGBA(0, 255, 255, 255));
                             canvas.fill_rect(target)?;
@@ -222,7 +247,7 @@ impl Render {
                     }
 
                     let surface = font
-                        .render(&key)
+                        .render(&key.to_string())
                         .blended(color)
                         .map_err(|e| e.to_string())?;
 
@@ -246,115 +271,107 @@ impl Render {
 
             for event in event_pump.poll_iter() {
                 match event {
-                    Event::Quit { .. } => {
+                    Event::KeyDown {
+                        keycode: Some(Keycode::Q),
+                        ..
+                    } => {
+                        self.emitter.send(events::Event::Quit)?;
                         break 'running;
                     }
                     Event::KeyDown {
                         repeat: false,
                         keycode,
                         ..
-                    } => match keycode {
-                        Some(Keycode::W {}) | Some(Keycode::E) | Some(Keycode::R)
-                        | Some(Keycode::T {}) | Some(Keycode::Y) | Some(Keycode::U)
-                        | Some(Keycode::I {}) | Some(Keycode::O) | Some(Keycode::A {})
-                        | Some(Keycode::S) | Some(Keycode::D) | Some(Keycode::F)
-                        | Some(Keycode::G) | Some(Keycode::H) | Some(Keycode::J)
-                        | Some(Keycode::K) | Some(Keycode::L) => {
-                            keyboard_to_midi.handle_key_on(keycode.unwrap());
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::Num1 {}) => {
-                            let scale = NaturalMinor::new(60);
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.set_scale(Box::new(scale));
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::Num2 {}) => {
-                            let scale = HarmonicMinor::new(60);
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.set_scale(Box::new(scale));
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::Num3 {}) => {
-                            let scale = MelodicMinor::new(60);
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.set_scale(Box::new(scale));
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::Q {}) => {
-                            self.emitter.send(events::Event::Quit)?;
-                            break 'running;
-                        }
-                        Some(Keycode::Z {}) => {
-                            let mut app_state = self.app_state.write().unwrap();
-                            let scale = &mut app_state.scale;
-                            scale.decrease_root(12);
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::X {}) => {
-                            let mut app_state = self.app_state.write().unwrap();
-                            let scale = &mut app_state.scale;
-                            scale.increase_root(12);
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        Some(Keycode::Space {}) => {
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.toggle_play_mode();
-                        }
-                        Some(Keycode::C {}) => {
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.scale.decrease_root(1);
-                        }
-                        Some(Keycode::V {}) => {
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.scale.increase_root(2);
-                        }
-                        Some(key) => {
-                            info!("key {:?}", key);
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state
-                                .pressed_keys
-                                .insert(keycode.unwrap().to_string(), true);
-                        }
-                        _ => {}
-                    },
+                    } => {
+                        let key = match keycode {
+                            Some(Keycode::Space {}) => events::Key::Space,
+                            Some(Keycode::Num0 {}) => events::Key::Num0,
+                            Some(Keycode::Num1 {}) => events::Key::Num1,
+                            Some(Keycode::Num2 {}) => events::Key::Num2,
+                            Some(Keycode::Num3 {}) => events::Key::Num3,
+                            Some(Keycode::Num4 {}) => events::Key::Num4,
+                            Some(Keycode::Num5 {}) => events::Key::Num5,
+                            Some(Keycode::Num6 {}) => events::Key::Num6,
+                            Some(Keycode::Num7 {}) => events::Key::Num7,
+                            Some(Keycode::Num8 {}) => events::Key::Num8,
+                            Some(Keycode::Q {}) => events::Key::Q,
+                            Some(Keycode::W {}) => events::Key::W,
+                            Some(Keycode::E {}) => events::Key::E,
+                            Some(Keycode::R {}) => events::Key::R,
+                            Some(Keycode::T {}) => events::Key::T,
+                            Some(Keycode::Y {}) => events::Key::Y,
+                            Some(Keycode::U {}) => events::Key::U,
+                            Some(Keycode::I {}) => events::Key::I,
+                            Some(Keycode::O {}) => events::Key::O,
+                            Some(Keycode::A {}) => events::Key::A,
+                            Some(Keycode::S {}) => events::Key::S,
+                            Some(Keycode::D {}) => events::Key::D,
+                            Some(Keycode::F {}) => events::Key::F,
+                            Some(Keycode::G {}) => events::Key::G,
+                            Some(Keycode::H {}) => events::Key::H,
+                            Some(Keycode::J {}) => events::Key::J,
+                            Some(Keycode::K {}) => events::Key::K,
+                            Some(Keycode::L {}) => events::Key::L,
+                            Some(Keycode::Z {}) => events::Key::Z,
+                            Some(Keycode::X {}) => events::Key::X,
+                            Some(Keycode::C {}) => events::Key::C,
+                            Some(Keycode::V {}) => events::Key::V,
+                            Some(Keycode::B {}) => events::Key::B,
+                            Some(Keycode::N {}) => events::Key::N,
+                            Some(Keycode::M {}) => events::Key::M,
+                            _ => events::Key::None,
+                        };
+
+                        self.emitter.send(events::Event::KeyDown(key))?;
+                    }
+
                     Event::KeyUp {
                         repeat: false,
                         keycode,
                         ..
-                    } => match keycode {
-                        Some(Keycode::W {}) | Some(Keycode::E) | Some(Keycode::R)
-                        | Some(Keycode::T {}) | Some(Keycode::Y) | Some(Keycode::U)
-                        | Some(Keycode::I {}) | Some(Keycode::O) | Some(Keycode::A {})
-                        | Some(Keycode::S) | Some(Keycode::D) | Some(Keycode::F)
-                        | Some(Keycode::G) | Some(Keycode::H) | Some(Keycode::J)
-                        | Some(Keycode::K) | Some(Keycode::L) => {
-                            keyboard_to_midi.handle_key_off(keycode.unwrap());
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.pressed_keys.remove(&keycode.unwrap().to_string());
-                        }
-                        Some(key) => {
-                            info!("key {:?}", key);
-                            let mut app_state = self.app_state.write().unwrap();
-                            app_state.pressed_keys.remove(&keycode.unwrap().to_string());
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                }
+                    } => {
+                        let key = match keycode {
+                            Some(Keycode::Num0 {}) => events::Key::Num0,
+                            Some(Keycode::Num1 {}) => events::Key::Num1,
+                            Some(Keycode::Num2 {}) => events::Key::Num2,
+                            Some(Keycode::Num3 {}) => events::Key::Num3,
+                            Some(Keycode::Num4 {}) => events::Key::Num4,
+                            Some(Keycode::Num5 {}) => events::Key::Num5,
+                            Some(Keycode::Num6 {}) => events::Key::Num6,
+                            Some(Keycode::Num7 {}) => events::Key::Num7,
+                            Some(Keycode::Num8 {}) => events::Key::Num8,
+                            Some(Keycode::Q {}) => events::Key::Q,
+                            Some(Keycode::W {}) => events::Key::W,
+                            Some(Keycode::E {}) => events::Key::E,
+                            Some(Keycode::R {}) => events::Key::R,
+                            Some(Keycode::T {}) => events::Key::T,
+                            Some(Keycode::Y {}) => events::Key::Y,
+                            Some(Keycode::U {}) => events::Key::U,
+                            Some(Keycode::I {}) => events::Key::I,
+                            Some(Keycode::O {}) => events::Key::O,
+                            Some(Keycode::A {}) => events::Key::A,
+                            Some(Keycode::S {}) => events::Key::S,
+                            Some(Keycode::D {}) => events::Key::D,
+                            Some(Keycode::F {}) => events::Key::F,
+                            Some(Keycode::G {}) => events::Key::G,
+                            Some(Keycode::H {}) => events::Key::H,
+                            Some(Keycode::J {}) => events::Key::J,
+                            Some(Keycode::K {}) => events::Key::K,
+                            Some(Keycode::L {}) => events::Key::L,
+                            Some(Keycode::Z {}) => events::Key::Z,
+                            Some(Keycode::X {}) => events::Key::X,
+                            Some(Keycode::C {}) => events::Key::C,
+                            Some(Keycode::V {}) => events::Key::V,
+                            Some(Keycode::B {}) => events::Key::B,
+                            Some(Keycode::N {}) => events::Key::N,
+                            Some(Keycode::M {}) => events::Key::M,
+                            _ => events::Key::None,
+                        };
+
+                        self.emitter.send(events::Event::KeyUp(key))?;
+                    }
+                    _ => (),
+                };
             }
 
             canvas.present();

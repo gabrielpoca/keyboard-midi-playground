@@ -1,9 +1,11 @@
 use super::scale::Scale;
 
-#[derive(Debug)]
 pub struct NaturalMinor {
     pub root: u32,
 }
+
+unsafe impl Sync for NaturalMinor {}
+unsafe impl Send for NaturalMinor {}
 
 impl NaturalMinor {
     pub fn new(root: u32) -> NaturalMinor {

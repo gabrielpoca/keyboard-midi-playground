@@ -3,14 +3,41 @@ use crate::events::*;
 use crate::scale::*;
 use crossbeam_channel::Sender;
 use log::info;
+use std::collections::HashMap;
+use std::error::Error;
 use std::sync::*;
 
-pub struct KeyboardToMidi {
+static NOTES: [&str; 12] = [
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
+];
+
+pub struct KeyboardTransform {
     pub emitter: Sender<Event>,
     pub app_state: Arc<RwLock<AppState>>,
+    pub mappings: HashMap<u32, Box<str>>,
 }
 
-impl KeyboardToMidi {
+impl KeyboardTransform {
+    pub fn new(emitter: Sender<Event>, app_state: Arc<RwLock<AppState>>) -> Self {
+        let mut index = 10;
+        let mut mappings = HashMap::new();
+
+        for note in 21..108 {
+            mappings.insert(note as u32, NOTES[index].into());
+            if index == 11 {
+                index = 0;
+            } else {
+                index += 1;
+            }
+        }
+
+        return KeyboardTransform {
+            emitter,
+            app_state,
+            mappings,
+        };
+    }
+
     pub fn reset(&self) {
         let app_state = self.app_state.read().unwrap();
 
@@ -29,6 +56,20 @@ impl KeyboardToMidi {
                 }
             }
         }
+    }
+
+    pub fn key_to_note(&self, key: Key) -> String {
+        let label = format!("{:?}", key);
+        let midi_note = self.keycode_to_midi(key);
+
+        if midi_note == 0 {
+            return label;
+        }
+
+        return match self.mappings.get(&midi_note) {
+            Some(note) => note.to_owned().to_string(),
+            None => label,
+        };
     }
 
     pub fn handle_key_on(&self, key: Key) {
@@ -95,6 +136,10 @@ impl KeyboardToMidi {
             Key::L => 8,
             _ => 0,
         };
+
+        if index == 0 {
+            return 0;
+        }
 
         let app_state = self.app_state.read().unwrap();
         let scale = &app_state.scale;

@@ -18,6 +18,7 @@ pub enum Key {
     Num6,
     Num7,
     Num8,
+    Num9,
     None,
     Q,
     W,

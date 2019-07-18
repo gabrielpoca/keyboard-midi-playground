@@ -3,6 +3,7 @@ extern crate sdl2;
 use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
+use crate::player::KeyboardTransform;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
 use sdl2::event::Event;
@@ -22,6 +23,12 @@ macro_rules! rect(
         Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
     )
 );
+
+struct KeyDraw<'a> {
+    target: Rect,
+    key: &'a events::Key,
+    color: Color,
+}
 
 fn get_centered_rect(
     rect_width: u32,
@@ -74,47 +81,184 @@ fn get_top_left_rect(rect_width: u32, rect_height: u32, cons_width: u32, cons_he
     rect!(22, 22, w, h)
 }
 
+struct RenderKey {
+    key: events::Key,
+    variant: u32,
+}
+
 static ROW_LENGTH: u32 = 10;
 
-static FIRST_ROW: [events::Key; 10] = [
-    events::Key::Q,
-    events::Key::W,
-    events::Key::E,
-    events::Key::R,
-    events::Key::T,
-    events::Key::Y,
-    events::Key::U,
-    events::Key::I,
-    events::Key::O,
-    events::Key::P,
+static NUM_ROW: [RenderKey; 10] = [
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num1,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num2,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num3,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num4,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num5,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num6,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num7,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num8,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num9,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::Num0,
+    },
 ];
 
-static SECOND_ROW: [events::Key; 9] = [
-    events::Key::A,
-    events::Key::S,
-    events::Key::D,
-    events::Key::F,
-    events::Key::G,
-    events::Key::H,
-    events::Key::J,
-    events::Key::K,
-    events::Key::L,
+static FIRST_ROW: [RenderKey; 10] = [
+    RenderKey {
+        variant: 4,
+        key: events::Key::Q,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::W,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::E,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::R,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::T,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::Y,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::U,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::I,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::O,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::P,
+    },
 ];
 
-static THIRD_ROW: [events::Key; 7] = [
-    events::Key::Z,
-    events::Key::X,
-    events::Key::C,
-    events::Key::V,
-    events::Key::B,
-    events::Key::N,
-    events::Key::M,
+static SECOND_ROW: [RenderKey; 9] = [
+    RenderKey {
+        variant: 0,
+        key: events::Key::A,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::S,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::D,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::F,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::G,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::H,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::J,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::K,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::L,
+    },
 ];
 
-fn get_keyboard_rects<'a>(
-    cons_width: u32,
-    _cons_height: u32,
-) -> (Vec<Rect>, Vec<(Rect, &'a events::Key)>) {
+static THIRD_ROW: [RenderKey; 7] = [
+    RenderKey {
+        variant: 2,
+        key: events::Key::Z,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::X,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::C,
+    },
+    RenderKey {
+        variant: 2,
+        key: events::Key::V,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::B,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::N,
+    },
+    RenderKey {
+        variant: 0,
+        key: events::Key::M,
+    },
+];
+
+static SPACE_ROW: RenderKey = RenderKey {
+    variant: 2,
+    key: events::Key::Space,
+};
+
+fn color_for_variant(variant: u32) -> Color {
+    return match variant {
+        1 => Color::RGBA(0, 255, 255, 255),
+        2 => Color::RGBA(0, 255, 155, 255),
+        4 => Color::RGBA(0, 0, 155, 255),
+        _ => Color::RGBA(0, 200, 255, 255),
+    };
+}
+
+fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec<KeyDraw<'a>>) {
     let spacing = 10;
     let total_spacing = 8 * spacing;
     let individual_width = (cons_width - total_spacing) / ROW_LENGTH;
@@ -122,24 +266,46 @@ fn get_keyboard_rects<'a>(
     let mut res = Vec::new();
     let mut keycode = Vec::new();
 
-    for (i, item) in FIRST_ROW.iter().enumerate() {
+    for (i, RenderKey { variant, key }) in NUM_ROW.iter().enumerate() {
         let i = i as u32;
-        let target = rect! {20 + (i * individual_width) + (i * spacing), 200, individual_width, individual_width};
-        keycode.push((target, item));
+        let target = rect! {20 + (i * individual_width) + (i * spacing), 150, individual_width, individual_width};
+        let color = color_for_variant(*variant);
+        keycode.push(KeyDraw { target, key, color });
         res.push(target);
     }
 
-    for (i, item) in SECOND_ROW.iter().enumerate() {
+    for (i, RenderKey { variant, key }) in FIRST_ROW.iter().enumerate() {
         let i = i as u32;
-        let target = rect! {28 + (i * individual_width) + (i * spacing), 200 + individual_width + spacing, individual_width, individual_width};
-        keycode.push((target, item));
+        let target = rect! {28 + (i * individual_width) + (i * spacing), 150 + individual_width + spacing, individual_width, individual_width};
+        let color = color_for_variant(*variant);
+        keycode.push(KeyDraw { target, key, color });
         res.push(target);
     }
 
-    for (i, item) in THIRD_ROW.iter().enumerate() {
+    for (i, RenderKey { variant, key }) in SECOND_ROW.iter().enumerate() {
         let i = i as u32;
-        let target = rect! {36 + (i * individual_width) + (i * spacing), 200 + (individual_width + spacing) * 2, individual_width, individual_width};
-        keycode.push((target, item));
+        let target = rect! {36 + (i * individual_width) + (i * spacing), 150 + (individual_width + spacing) * 2, individual_width, individual_width};
+        let color = color_for_variant(*variant);
+        keycode.push(KeyDraw { target, key, color });
+        res.push(target);
+    }
+
+    for (i, RenderKey { variant, key }) in THIRD_ROW.iter().enumerate() {
+        let i = i as u32;
+        let target = rect! {44 + (i * individual_width) + (i * spacing), 150 + (individual_width + spacing) * 3, individual_width, individual_width};
+        let color = color_for_variant(*variant);
+        keycode.push(KeyDraw { target, key, color });
+        res.push(target);
+    }
+
+    {
+        let target = rect! {44 + 2 * individual_width + 2 * spacing, 150 + (individual_width + spacing) * 4, 5 * individual_width + 5 * spacing, individual_width};
+        let color = color_for_variant(SPACE_ROW.variant);
+        keycode.push(KeyDraw {
+            target,
+            key: &SPACE_ROW.key,
+            color,
+        });
         res.push(target);
     }
 
@@ -187,6 +353,9 @@ impl Render {
 
         let mut event_pump = sdl_context.event_pump().unwrap();
 
+        let keyboard_transform =
+            KeyboardTransform::new(self.emitter.clone(), self.app_state.clone());
+
         'running: loop {
             canvas.set_draw_color(Color::RGB(0, 0, 0));
             canvas.clear();
@@ -228,15 +397,15 @@ impl Render {
             }
 
             canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
-            let (rects, keycodes) = get_keyboard_rects(SCREEN_WIDTH - 60, SCREEN_HEIGHT);
-
-            canvas.draw_rects(&rects)?;
+            let (key_targets, key_draws) = get_keyboard_rects(SCREEN_WIDTH - 60, SCREEN_HEIGHT);
+            canvas.draw_rects(&key_targets)?;
 
             {
-                let app_state = self.app_state.write().unwrap();
+                let app_state = self.app_state.read().unwrap();
 
-                for (target, key) in keycodes {
-                    let color = Color::RGBA(255, 255, 255, 255);
+                for KeyDraw { key, target, color } in key_draws {
+                    canvas.set_draw_color(color);
+                    canvas.fill_rect(target)?;
 
                     match app_state.pressed_keys.get(&key) {
                         Some(true) => {
@@ -246,8 +415,12 @@ impl Render {
                         _ => {}
                     }
 
+                    let label = keyboard_transform.key_to_note(key.clone());
+
+                    let color = Color::RGBA(255, 255, 255, 255);
+
                     let surface = font
-                        .render(&key.to_string())
+                        .render(&label)
                         .blended(color)
                         .map_err(|e| e.to_string())?;
 

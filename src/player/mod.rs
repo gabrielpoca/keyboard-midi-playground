@@ -1,4 +1,4 @@
-mod keyboard;
+mod keyboard_transform;
 
 use crate::app_state::*;
 use crate::events::*;
@@ -6,7 +6,7 @@ use crate::scale::*;
 use std::sync::*;
 use std::thread;
 
-use keyboard::KeyboardToMidi;
+pub use keyboard_transform::KeyboardTransform;
 
 pub struct Player {
     handle: thread::JoinHandle<()>,
@@ -16,10 +16,8 @@ impl Player {
     pub fn new(app_state: Arc<RwLock<AppState>>, event_bus: &mut EventBus) -> Self {
         let events_recv = event_bus.new_receive();
 
-        let keyboard_to_midi = KeyboardToMidi {
-            emitter: event_bus.emitter.clone(),
-            app_state: app_state.clone(),
-        };
+        let keyboard_transform =
+            KeyboardTransform::new(event_bus.emitter.clone(), app_state.clone());
 
         let handle = thread::spawn(move || loop {
             select! {
@@ -33,7 +31,7 @@ impl Player {
                         Event::KeyDown(key) => {
                             match key {
                                 Key::Num1 {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let scale = NaturalMinor::new(60);
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.set_scale(Box::new(scale));
@@ -42,7 +40,7 @@ impl Player {
                                     .insert(key, true);
                                 }
                                 Key::Num2 {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let scale = HarmonicMinor::new(60);
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.set_scale(Box::new(scale));
@@ -51,7 +49,7 @@ impl Player {
                                     .insert(key, true);
                                 }
                                 Key::Num3 {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let scale = MelodicMinor::new(60);
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.set_scale(Box::new(scale));
@@ -60,7 +58,7 @@ impl Player {
                                     .insert(key, true);
                                 }
                                 Key::Z {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let mut app_state = app_state.write().unwrap();
 
                                     let scale = &mut app_state.scale;
@@ -69,7 +67,7 @@ impl Player {
 
                                 }
                                 Key::X {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let mut app_state = app_state.write().unwrap();
 
                                     let scale = &mut app_state.scale;
@@ -77,17 +75,17 @@ impl Player {
                                     app_state.pressed_keys.insert(key, true);
                                 }
                                 Key::Space {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.toggle_play_mode();
                                 }
                                 Key::C {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.scale.decrease_root(1);
                                 }
                                 Key::V {} => {
-                                    keyboard_to_midi.reset();
+                                    keyboard_transform.reset();
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.scale.increase_root(2);
                                 }
@@ -97,7 +95,7 @@ impl Player {
                                 | Key::S | Key::D | Key::F
                                 | Key::G | Key::H | Key::J
                                 | Key::K | Key::L => {
-                                    keyboard_to_midi.handle_key_on(key.clone());
+                                    keyboard_transform.handle_key_on(key.clone());
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.pressed_keys.insert(key, true);
                                 }
@@ -115,7 +113,7 @@ impl Player {
                                 | Key::S | Key::D | Key::F
                                 | Key::G | Key::H | Key::J
                                 | Key::K | Key::L => {
-                                    keyboard_to_midi.handle_key_off(key.clone());
+                                    keyboard_transform.handle_key_off(key.clone());
                                     let mut app_state = app_state.write().unwrap();
                                     app_state.pressed_keys.remove(&key);
                                 }

@@ -11,6 +11,8 @@ pub struct AppState {
     pub scale: Box<dyn Scale + Sync + Send>,
     pub play_mode: PlayMode,
     pub pressed_keys: HashMap<Key, bool>,
+    pub screen_width: u32,
+    pub screen_height: u32,
 }
 
 impl AppState {
@@ -19,6 +21,8 @@ impl AppState {
             scale,
             play_mode: PlayMode::Single,
             pressed_keys: HashMap::new(),
+            screen_width: 800,
+            screen_height: 600,
         };
     }
 

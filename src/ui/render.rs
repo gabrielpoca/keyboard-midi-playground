@@ -3,7 +3,7 @@ extern crate sdl2;
 use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
-use crate::player::KeyboardTransform;
+use crate::player::KeyboardHandler;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
 use sdl2::event::Event;
@@ -354,7 +354,7 @@ impl Render {
         let mut event_pump = sdl_context.event_pump().unwrap();
 
         let keyboard_transform =
-            KeyboardTransform::new(self.emitter.clone(), self.app_state.clone());
+            KeyboardHandler::new(self.emitter.clone(), self.app_state.clone());
 
         'running: loop {
             canvas.set_draw_color(Color::RGB(0, 0, 0));

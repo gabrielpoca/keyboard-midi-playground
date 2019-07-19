@@ -2,22 +2,20 @@ use crate::app_state::*;
 use crate::events::*;
 use crate::scale::*;
 use crossbeam_channel::Sender;
-use log::info;
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::*;
 
 static NOTES: [&str; 12] = [
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 ];
 
-pub struct KeyboardTransform {
+pub struct KeyboardHandler {
     pub emitter: Sender<Event>,
     pub app_state: Arc<RwLock<AppState>>,
     pub mappings: HashMap<u32, Box<str>>,
 }
 
-impl KeyboardTransform {
+impl KeyboardHandler {
     pub fn new(emitter: Sender<Event>, app_state: Arc<RwLock<AppState>>) -> Self {
         let mut index = 10;
         let mut mappings = HashMap::new();
@@ -31,7 +29,7 @@ impl KeyboardTransform {
             }
         }
 
-        return KeyboardTransform {
+        return KeyboardHandler {
             emitter,
             app_state,
             mappings,
@@ -43,7 +41,7 @@ impl KeyboardTransform {
 
         for (key, val) in app_state.pressed_keys.iter() {
             if *val == true {
-                let notes: Vec<u32> = self.get_notes(key.clone());
+                let notes: Vec<u32> = self.key_to_midi_notes(key.clone());
 
                 for note in notes.iter() {
                     self.emitter
@@ -60,7 +58,7 @@ impl KeyboardTransform {
 
     pub fn key_to_note(&self, key: Key) -> String {
         let label = format!("{:?}", key);
-        let midi_note = self.keycode_to_midi(key);
+        let midi_note = self.key_to_midi(key);
 
         if midi_note == 0 {
             return label;
@@ -73,8 +71,7 @@ impl KeyboardTransform {
     }
 
     pub fn handle_key_on(&self, key: Key) {
-        info!("on {}", key);
-        let notes: Vec<u32> = self.get_notes(key);
+        let notes: Vec<u32> = self.key_to_midi_notes(key);
 
         for note in notes.iter() {
             self.emitter
@@ -88,8 +85,7 @@ impl KeyboardTransform {
     }
 
     pub fn handle_key_off(&self, key: Key) {
-        info!("off {}", key);
-        let notes: Vec<u32> = self.get_notes(key);
+        let notes: Vec<u32> = self.key_to_midi_notes(key);
 
         for note in notes.iter() {
             self.emitter
@@ -102,9 +98,9 @@ impl KeyboardTransform {
         }
     }
 
-    fn get_notes(&self, key: Key) -> Vec<u32> {
+    fn key_to_midi_notes(&self, key: Key) -> Vec<u32> {
         let app_state = self.app_state.read().unwrap();
-        let note = self.keycode_to_midi(key);
+        let note = self.key_to_midi(key);
         let mut notes: Vec<u32> = [note].to_vec();
 
         if app_state.play_chord() {
@@ -115,7 +111,7 @@ impl KeyboardTransform {
         return notes;
     }
 
-    fn keycode_to_midi(&self, key: Key) -> u32 {
+    fn key_to_midi(&self, key: Key) -> u32 {
         let index = match key {
             Key::W => 4,
             Key::E => 5,

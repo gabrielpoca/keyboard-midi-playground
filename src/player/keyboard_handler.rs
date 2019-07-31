@@ -2,6 +2,7 @@ use crate::app_state::*;
 use crate::events::*;
 use crate::scale::*;
 use crossbeam_channel::Sender;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::*;
 
@@ -17,7 +18,7 @@ pub struct KeyboardHandler {
 
 impl KeyboardHandler {
     pub fn new(emitter: Sender<Event>, app_state: Arc<RwLock<AppState>>) -> Self {
-        let mut index = 10;
+        let mut index = 9;
         let mut mappings = HashMap::new();
 
         for note in 21..108 {
@@ -56,17 +57,17 @@ impl KeyboardHandler {
         }
     }
 
-    pub fn key_to_note(&self, key: Key) -> String {
+    pub fn key_to_note<'a>(&self, key: Key) -> Cow<str> {
         let label = format!("{:?}", key);
         let midi_note = self.key_to_midi(key);
 
-        if midi_note == 0 {
-            return label;
+        if midi_note == None {
+            return Cow::from(label);
         }
 
-        return match self.mappings.get(&midi_note) {
-            Some(note) => note.to_owned().to_string(),
-            None => label,
+        return match self.mappings.get(&midi_note.unwrap()) {
+            Some(note) => Cow::from(note.to_string()),
+            None => Cow::from(label),
         };
     }
 
@@ -101,17 +102,23 @@ impl KeyboardHandler {
     fn key_to_midi_notes(&self, key: Key) -> Vec<u32> {
         let app_state = self.app_state.read().unwrap();
         let note = self.key_to_midi(key);
-        let mut notes: Vec<u32> = [note].to_vec();
 
-        if app_state.play_chord() {
-            let scale = &app_state.scale;
-            notes = chord::get(scale, note);
-        }
-
-        return notes;
+        match note {
+            Some(note) => {
+                if app_state.play_chord() {
+                    let scale = &app_state.scale;
+                    return chord::get(scale, note);
+                } else {
+                    return [note].to_vec();
+                }
+            }
+            None => {
+                return Vec::new();
+            }
+        };
     }
 
-    fn key_to_midi(&self, key: Key) -> u32 {
+    fn key_to_midi(&self, key: Key) -> Option<u32> {
         let index = match key {
             Key::W => 4,
             Key::E => 5,
@@ -130,16 +137,16 @@ impl KeyboardHandler {
             Key::J => 6,
             Key::K => 7,
             Key::L => 8,
-            _ => 0,
+            _ => -1,
         };
 
-        if index == 0 {
-            return 0;
+        if index == -1 {
+            return None;
         }
 
         let app_state = self.app_state.read().unwrap();
         let scale = &app_state.scale;
 
-        return scale.note(index);
+        return Some(scale.note(index));
     }
 }

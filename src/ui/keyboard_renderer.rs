@@ -8,6 +8,7 @@ use sdl2::render::TextureQuery;
 use sdl2::render::{TextureCreator, WindowCanvas};
 use sdl2::ttf::Font;
 use sdl2::video::WindowContext;
+use std::borrow::Cow;
 use std::error::Error;
 use std::sync::*;
 
@@ -17,13 +18,15 @@ macro_rules! rect(
     )
 );
 
-struct KeyboardKey {
+struct KeyboardKey<'a> {
     key: events::Key,
     variant: u32,
+    label: Option<&'a str>,
 }
 
 struct KeyToDraw<'a> {
     target: Rect,
+    label: Cow<'a, str>,
     key: &'a events::Key,
     color: Color,
 }
@@ -32,85 +35,105 @@ static ROW_LENGTH: u32 = 10;
 
 static NUM_ROW: [KeyboardKey; 10] = [
     KeyboardKey {
-        variant: 2,
+        label: Some("min"),
+        variant: 1,
         key: events::Key::Num1,
     },
     KeyboardKey {
-        variant: 2,
+        label: Some("h min"),
+        variant: 1,
         key: events::Key::Num2,
     },
     KeyboardKey {
-        variant: 2,
+        variant: 1,
+        label: Some("m min"),
         key: events::Key::Num3,
     },
     KeyboardKey {
+        label: None,
         variant: 2,
         key: events::Key::Num4,
     },
     KeyboardKey {
+        label: None,
         variant: 2,
         key: events::Key::Num5,
     },
     KeyboardKey {
+        label: None,
         variant: 2,
         key: events::Key::Num6,
     },
     KeyboardKey {
+        label: None,
         variant: 2,
         key: events::Key::Num7,
     },
     KeyboardKey {
         variant: 2,
+        label: None,
         key: events::Key::Num8,
     },
     KeyboardKey {
         variant: 2,
+        label: None,
         key: events::Key::Num9,
     },
     KeyboardKey {
         variant: 2,
+        label: None,
         key: events::Key::Num0,
     },
 ];
 
 static FIRST_ROW: [KeyboardKey; 10] = [
     KeyboardKey {
-        variant: 4,
+        variant: 1,
+        label: None,
         key: events::Key::Q,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::W,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::E,
     },
     KeyboardKey {
         variant: 0,
         key: events::Key::R,
+        label: None,
     },
     KeyboardKey {
         variant: 0,
         key: events::Key::T,
+        label: None,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::Y,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::U,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::I,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::O,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::P,
     },
@@ -118,85 +141,101 @@ static FIRST_ROW: [KeyboardKey; 10] = [
 
 static SECOND_ROW: [KeyboardKey; 9] = [
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::A,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::S,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::D,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::F,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::G,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::H,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::J,
     },
     KeyboardKey {
+        label: None,
         variant: 0,
         key: events::Key::K,
     },
     KeyboardKey {
         variant: 0,
+        label: None,
         key: events::Key::L,
     },
 ];
 
 static THIRD_ROW: [KeyboardKey; 7] = [
     KeyboardKey {
-        variant: 2,
+        label: None,
+        variant: 1,
         key: events::Key::Z,
     },
     KeyboardKey {
-        variant: 2,
+        variant: 1,
+        label: None,
         key: events::Key::X,
     },
     KeyboardKey {
-        variant: 2,
+        label: None,
+        variant: 1,
         key: events::Key::C,
     },
     KeyboardKey {
-        variant: 2,
+        label: None,
+        variant: 1,
         key: events::Key::V,
     },
     KeyboardKey {
-        variant: 0,
+        label: None,
+        variant: 2,
         key: events::Key::B,
     },
     KeyboardKey {
-        variant: 0,
+        label: None,
+        variant: 2,
         key: events::Key::N,
     },
     KeyboardKey {
-        variant: 0,
+        variant: 2,
+        label: None,
         key: events::Key::M,
     },
 ];
 
 static SPACE_ROW: KeyboardKey = KeyboardKey {
-    variant: 2,
+    label: Some("Mode"),
+    variant: 1,
     key: events::Key::Space,
 };
 
 fn color_for_variant(variant: u32) -> Color {
     return match variant {
-        1 => Color::RGBA(0, 255, 255, 255),
-        2 => Color::RGBA(0, 255, 155, 255),
-        4 => Color::RGBA(0, 0, 155, 255),
-        _ => Color::RGBA(0, 200, 255, 255),
+        0 => Color::RGBA(91, 72, 125, 0),
+        1 => Color::RGBA(53, 37, 69, 255),
+        _ => Color::RGBA(26, 22, 37, 255),
     };
 }
 
@@ -232,7 +271,11 @@ fn get_centered_rect(
     rect!(cx as i32, cy as i32, w, h)
 }
 
-fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec<KeyToDraw<'a>>) {
+fn get_keyboard_rects<'a>(
+    keyboard_handler: &'a KeyboardHandler,
+    cons_width: u32,
+    _cons_height: u32,
+) -> (Vec<Rect>, Vec<KeyToDraw<'a>>) {
     let spacing = 10;
     let total_spacing = 8 * spacing;
     let individual_width = (cons_width - total_spacing) / ROW_LENGTH;
@@ -240,35 +283,131 @@ fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec
     let mut res = Vec::new();
     let mut keycode = Vec::new();
 
-    for (i, KeyboardKey { variant, key }) in NUM_ROW.iter().enumerate() {
+    for (
+        i,
+        KeyboardKey {
+            variant,
+            key,
+            label,
+        },
+    ) in NUM_ROW.iter().enumerate()
+    {
+        let key_label;
+
+        match label {
+            Some(actual_label) => {
+                key_label = Cow::from(*actual_label);
+            }
+            None => {
+                key_label = Cow::from(keyboard_handler.key_to_note(key.clone()));
+            }
+        }
+
         let i = i as u32;
         let target = rect! {20 + (i * individual_width) + (i * spacing), 150, individual_width, individual_width};
         let color = color_for_variant(*variant);
-        keycode.push(KeyToDraw { target, key, color });
+        keycode.push(KeyToDraw {
+            label: key_label,
+            target,
+            key,
+            color,
+        });
         res.push(target);
     }
 
-    for (i, KeyboardKey { variant, key }) in FIRST_ROW.iter().enumerate() {
+    for (
+        i,
+        KeyboardKey {
+            variant,
+            key,
+            label,
+        },
+    ) in FIRST_ROW.iter().enumerate()
+    {
+        let key_label;
+
+        match label {
+            Some(actual_label) => {
+                key_label = Cow::from(*actual_label);
+            }
+            None => {
+                key_label = Cow::from(keyboard_handler.key_to_note(key.clone()));
+            }
+        }
+
         let i = i as u32;
         let target = rect! {28 + (i * individual_width) + (i * spacing), 150 + individual_width + spacing, individual_width, individual_width};
         let color = color_for_variant(*variant);
-        keycode.push(KeyToDraw { target, key, color });
+        keycode.push(KeyToDraw {
+            label: key_label,
+            target,
+            key,
+            color,
+        });
         res.push(target);
     }
 
-    for (i, KeyboardKey { variant, key }) in SECOND_ROW.iter().enumerate() {
+    for (
+        i,
+        KeyboardKey {
+            variant,
+            key,
+            label,
+        },
+    ) in SECOND_ROW.iter().enumerate()
+    {
+        let key_label;
+
+        match label {
+            Some(actual_label) => {
+                key_label = Cow::from(*actual_label);
+            }
+            None => {
+                key_label = Cow::from(keyboard_handler.key_to_note(key.clone()));
+            }
+        }
+
         let i = i as u32;
         let target = rect! {36 + (i * individual_width) + (i * spacing), 150 + (individual_width + spacing) * 2, individual_width, individual_width};
         let color = color_for_variant(*variant);
-        keycode.push(KeyToDraw { target, key, color });
+        keycode.push(KeyToDraw {
+            label: key_label,
+            target,
+            key,
+            color,
+        });
         res.push(target);
     }
 
-    for (i, KeyboardKey { variant, key }) in THIRD_ROW.iter().enumerate() {
+    for (
+        i,
+        KeyboardKey {
+            variant,
+            key,
+            label,
+        },
+    ) in THIRD_ROW.iter().enumerate()
+    {
+        let key_label;
+
+        match label {
+            Some(actual_label) => {
+                key_label = Cow::from(*actual_label);
+            }
+            None => {
+                key_label = Cow::from(keyboard_handler.key_to_note(key.clone()));
+            }
+        }
+
         let i = i as u32;
         let target = rect! {44 + (i * individual_width) + (i * spacing), 150 + (individual_width + spacing) * 3, individual_width, individual_width};
         let color = color_for_variant(*variant);
-        keycode.push(KeyToDraw { target, key, color });
+        keycode.push(KeyToDraw {
+            label: key_label,
+            target,
+            key,
+            color,
+        });
         res.push(target);
     }
 
@@ -276,6 +415,7 @@ fn get_keyboard_rects<'a>(cons_width: u32, _cons_height: u32) -> (Vec<Rect>, Vec
         let target = rect! {44 + 2 * individual_width + 2 * spacing, 150 + (individual_width + spacing) * 4, 5 * individual_width + 5 * spacing, individual_width};
         let color = color_for_variant(SPACE_ROW.variant);
         keycode.push(KeyToDraw {
+            label: Cow::from(SPACE_ROW.label.unwrap()),
             target,
             key: &SPACE_ROW.key,
             color,
@@ -309,24 +449,29 @@ impl<'l> KeyboardRenderer {
     ) -> Result<(), Box<dyn Error>> {
         let app_state = self.app_state.read().unwrap();
 
-        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
-        let (key_targets, key_draws) =
-            get_keyboard_rects(app_state.screen_width - 60, app_state.screen_height);
-        canvas.draw_rects(&key_targets)?;
+        let (_key_targets, key_draws) = get_keyboard_rects(
+            &self.keyboard_handler,
+            app_state.screen_width - 60,
+            app_state.screen_height,
+        );
 
-        for KeyToDraw { key, target, color } in key_draws {
+        for KeyToDraw {
+            key,
+            target,
+            color,
+            label,
+        } in key_draws
+        {
             canvas.set_draw_color(color);
             canvas.fill_rect(target)?;
 
             match app_state.pressed_keys.get(&key) {
                 Some(true) => {
-                    canvas.set_draw_color(Color::RGBA(0, 255, 255, 255));
+                    canvas.set_draw_color(Color::RGBA(171, 136, 213, 255));
                     canvas.fill_rect(target)?;
                 }
                 _ => {}
             }
-
-            let label = self.keyboard_handler.key_to_note(key.clone());
 
             let color = Color::RGBA(255, 255, 255, 255);
 
@@ -351,6 +496,9 @@ impl<'l> KeyboardRenderer {
 
             canvas.copy(&texture, None, Some(target))?;
         }
+
+        //canvas.set_draw_color(Color::RGBA(0, 255, 255, 255));
+        //canvas.draw_rects(&key_targets)?;
 
         return Ok(());
     }

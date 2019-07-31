@@ -4,7 +4,7 @@ use crate::app_state::*;
 use crate::events;
 use crate::events::EventBus;
 //use crate::player::KeyboardHandler;
-use super::keyboard::KeyboardRenderer;
+use super::keyboard_renderer::KeyboardRenderer;
 use crossbeam_channel::{Receiver, Sender};
 use log::info;
 use sdl2::event::Event;

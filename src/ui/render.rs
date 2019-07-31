@@ -57,16 +57,11 @@ impl Render {
             .build()
             .unwrap();
 
-        match window.set_opacity(0.8) {
-            Ok(_) => {}
-            Err(e) => info!("{:?}", e),
-        }
-
         let mut canvas = window.into_canvas().build().unwrap();
 
         canvas.present();
         let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-        let font = ttf_context.load_font("./assets/Roboto/Roboto-Regular.ttf", 28)?;
+        let font = ttf_context.load_font("./assets/Roboto/Roboto-Regular.ttf", 20)?;
         let texture_creator = canvas.texture_creator();
 
         let mut event_pump = sdl_context.event_pump().unwrap();
@@ -74,7 +69,7 @@ impl Render {
             KeyboardRenderer::new(self.emitter.clone(), self.app_state.clone());
 
         'running: loop {
-            canvas.set_draw_color(Color::RGB(0, 0, 0));
+            canvas.set_draw_color(Color::RGB(26, 22, 37));
             canvas.clear();
 
             {

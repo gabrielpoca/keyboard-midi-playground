@@ -50,13 +50,13 @@ static NUM_ROW: [KeyboardKey; 10] = [
         key: events::Key::Num3,
     },
     KeyboardKey {
-        label: None,
-        variant: 2,
+        label: Some("p min"),
+        variant: 1,
         key: events::Key::Num4,
     },
     KeyboardKey {
-        label: None,
-        variant: 2,
+        label: Some("b min"),
+        variant: 1,
         key: events::Key::Num5,
     },
     KeyboardKey {

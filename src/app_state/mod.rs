@@ -5,6 +5,7 @@ use std::collections::HashMap;
 pub enum PlayMode {
     Single,
     Chord,
+    Chord7,
 }
 
 pub struct AppState {
@@ -33,14 +34,22 @@ impl AppState {
     pub fn toggle_play_mode(&mut self) {
         match self.play_mode {
             PlayMode::Single => self.play_mode = PlayMode::Chord,
-            PlayMode::Chord => self.play_mode = PlayMode::Single,
+            PlayMode::Chord => self.play_mode = PlayMode::Chord7,
+            PlayMode::Chord7 => self.play_mode = PlayMode::Single,
         }
     }
 
     pub fn play_chord(&self) -> bool {
         return match self.play_mode {
-            PlayMode::Single => false,
             PlayMode::Chord => true,
+            _ => false
+        };
+    }
+
+    pub fn play_chord7(&self) -> bool {
+        return match self.play_mode {
+            PlayMode::Chord7 => true,
+            _ => false
         };
     }
 
@@ -48,6 +57,7 @@ impl AppState {
         return match self.play_mode {
             PlayMode::Single => "Single Note".into(),
             PlayMode::Chord => "Chord".into(),
+            PlayMode::Chord7 => "Chord7".into(),
         };
     }
 }

@@ -56,6 +56,24 @@ impl Player {
                                     .pressed_keys
                                     .insert(key, true);
                                 }
+                                Key::Num4 {} => {
+                                    keyboard_handler.reset();
+                                    let scale = PentatonicMinor::new(60);
+                                    let mut app_state = app_state.write().unwrap();
+                                    app_state.set_scale(Box::new(scale));
+                                    app_state
+                                    .pressed_keys
+                                    .insert(key, true);
+                                }
+                                Key::Num5 {} => {
+                                    keyboard_handler.reset();
+                                    let scale = BluesMinor::new(60);
+                                    let mut app_state = app_state.write().unwrap();
+                                    app_state.set_scale(Box::new(scale));
+                                    app_state
+                                    .pressed_keys
+                                    .insert(key, true);
+                                }
                                 Key::Z {} => {
                                     keyboard_handler.reset();
                                     let mut app_state = app_state.write().unwrap();

@@ -108,6 +108,9 @@ impl KeyboardHandler {
                 if app_state.play_chord() {
                     let scale = &app_state.scale;
                     return chord::get(scale, note);
+                } else if app_state.play_chord7() {
+                    let scale = &app_state.scale;
+                    return chord::get7(scale, note);
                 } else {
                     return [note].to_vec();
                 }

@@ -189,22 +189,22 @@ static SECOND_ROW: [KeyboardKey; 9] = [
 
 static THIRD_ROW: [KeyboardKey; 7] = [
     KeyboardKey {
-        label: None,
+        label: Some("-1 o"),
         variant: 1,
         key: events::Key::Z,
     },
     KeyboardKey {
         variant: 1,
-        label: None,
+        label: Some("+1 o"),
         key: events::Key::X,
     },
     KeyboardKey {
-        label: None,
+        label: Some("-1 s"),
         variant: 1,
         key: events::Key::C,
     },
     KeyboardKey {
-        label: None,
+        label: Some("+1 s"),
         variant: 1,
         key: events::Key::V,
     },
